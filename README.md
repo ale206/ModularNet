@@ -70,3 +70,7 @@ Adopting this architecture brings several key benefits:
 * **Clean Code & Best Practices:** Encourages adherence to SOLID principles (especially Dependency Injection and Single Responsibility) and promotes a clear separation of concerns, leading to a cleaner, more understandable codebase.
 * **Flexibility:** The reliance on interfaces allows for different implementations of infrastructure concerns to be swapped out relatively easily (e.g., moving from SQL Server to PostgreSQL, or changing a caching provider).
 * **Clear Structure:** Provides a well-defined structure that is easier for development teams to understand, navigate, and contribute to effectively.
+
+For more details and in-depth explanations about the solution, please visit the **[Wiki section](https://github.com/ale206/ModularNet/wiki)**.
+
+I welcome contributions and feedback! If you have ideas, suggestions, or improvements, feel free to open an issue or submit a pull request. Your input helps make this project better for everyone.
