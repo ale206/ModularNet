@@ -10,6 +10,8 @@ The core idea is to decouple the application's core business logic from both the
 
 This architectural pattern is highly versatile and can be adapted for various types of .NET solutions, including Web APIs, Console Applications, Worker Services, Lambdas, and more, providing a solid foundation for growth and change.
 
+It is an almost-ready-to-use template to manage the registration and login of a user with `Google firebase`, email sending and secrets management with `azure`, `authentication` and `authorization` in APIs, `logs`, etc.
+
 ## Architecture Layers
 
 The architecture is composed of the following layers:
