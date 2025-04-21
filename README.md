@@ -73,4 +73,4 @@ Adopting this architecture brings several key benefits:
 
 For more details and in-depth explanations about the solution, please visit the **[Wiki section](https://github.com/ale206/ModularNet/wiki)**.
 
-I welcome contributions and feedback! If you have ideas, suggestions, or improvements, feel free to open an issue or submit a pull request. Your input helps make this project better for everyone.
+I welcome contributions and feedback! If you have ideas, suggestions, or improvements, feel free to open an issue, submit a pull request, or write in the **[Discussions section](https://github.com/ale206/ModularNet/discussions)**. Your input helps make this project better for everyone.
