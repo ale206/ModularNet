@@ -52,3 +52,9 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# JetBrains IDEs (IntelliJ IDEA, Rider, etc.)
+.idea/
+*.iml
+*.iws
+out/

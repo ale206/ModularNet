@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Azure.Communication.Email" Version="1.0.1"/>
+        <PackageReference Include="Azure.Identity" Version="1.13.2"/>
+        <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.7.0"/>
+        <PackageReference Include="BouncyCastle.NetCore" Version="2.2.1"/>
+        <PackageReference Include="FirebaseAdmin" Version="3.1.0"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+        <PackageReference Include="StackExchange.Redis" Version="2.8.31"/>
+        <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1"/>
+        <PackageReference Include="System.Security.Cryptography.Encoding" Version="4.3.0"/>
+        <PackageReference Include="System.Text.Encodings.Web" Version="9.0.4"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ModularNet.Domain\ModularNet.Domain.csproj"/>
+        <ProjectReference Include="..\ModularNet.Infrastructure\ModularNet.Infrastructure.csproj"/>
+    </ItemGroup>
+
+</Project>
