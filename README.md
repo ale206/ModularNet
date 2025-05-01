@@ -73,6 +73,18 @@ Adopting this architecture brings several key benefits:
 * **Flexibility:** The reliance on interfaces allows for different implementations of infrastructure concerns to be swapped out relatively easily (e.g., moving from SQL Server to PostgreSQL, or changing a caching provider).
 * **Clear Structure:** Provides a well-defined structure that is easier for development teams to understand, navigate, and contribute to effectively.
 
+## Differences from Onion Architecture
+
+ModularNet architecture is inspired by and very similar to Onion Architecture (and Clean Architecture), but has some differences:
+
+* In classic Onion, Business Logic defines the abstractions (`IXxxRepository`), and Infrastructure implements them. In ModularNet, the Infrastructure layer defines `IXxxRepository`, and Business Logic consumes it.
+
+* ModularNet does not follow DDD, and the domain contains just POCOs with no constructor or logic. This is the Anemic Domain Model, which I consider cleaner and with less “hidden magic.”
+
+* ModularNet includes a Shared layer, which Onion Architecture doesn’t define.
+
+* All DTOs or application entities are always placed in the Domain layer. In Onion, these application-specific data transfer objects would reside in the Business Logic layer.
+   
 For more details and in-depth explanations about the solution, please visit the **[Wiki section](https://github.com/ale206/ModularNet/wiki)**.
 
 I welcome contributions and feedback! If you have ideas, suggestions, or improvements, feel free to open an issue, submit a pull request, or write in the **[Discussions section](https://github.com/ale206/ModularNet/discussions)**. Your input helps make this project better for everyone.
