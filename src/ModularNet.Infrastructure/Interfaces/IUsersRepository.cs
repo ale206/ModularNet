@@ -8,10 +8,6 @@ public interface IUsersRepository
     Task RegisterUser(User user);
     Task UpdateUserLoginDate(Guid userId, DateTime userAuthenticatedOn);
     Task<User?> GetUserById(Guid userId);
-    Task<bool> CheckIfKycVerified(Guid userId);
-    Task UpdateDocumentExpirationAndCompleteProcess(Guid userId, DateTime documentExpiresOn);
-    Task SetSubscriptionsPassword(Guid userId, bool isSubscriptionPasswordSet);
-    Task<int> GetRegisteredUsersNumber();
     Task SetUserEmailAsVerified(Guid userId);
     Task SetTermsAndConditionsAsAccepted(Guid userId);
     Task DeactivateAccount(Guid userId);

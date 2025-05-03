@@ -25,7 +25,7 @@ public class EmailServiceRepository : IEmailServiceRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"INSERT INTO `email` 
+            @"INSERT INTO `modular_net`.`email` 
             (`id`, `subject`, `plain_text`, `html`, `sender_email`, `email_recipients`, `email_importance`, `is_enabled`, `created_on`)
             VALUES 
             (@id, @subject, @plain_text, @html, @sender_email, @email_recipients, @email_importance, @is_enabled, @created_on)
@@ -53,7 +53,7 @@ public class EmailServiceRepository : IEmailServiceRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `email` 
+            @"UPDATE `modular_net`.`email` 
                 SET `message_id` = @message_id, modified_on = @modified_on
                 WHERE id = @id
                 ";
@@ -73,7 +73,7 @@ public class EmailServiceRepository : IEmailServiceRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `email` 
+            @"UPDATE `modular_net`.`email` 
                 SET `send_status` = @send_status, modified_on = @modified_on
                 WHERE id = @id
                 ";

@@ -25,7 +25,7 @@ public class LogsRepository : ILogsRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"INSERT INTO `modularNet_logs` 
+            @"INSERT INTO `modular_net`.`modular_net_logs` 
                 (`id`, `log_timestamp`, `log_level`, `log_message`, `log_exception`, `log_properties`)
                 VALUES 
                 (@id, @log_timestamp, @log_level, @log_message, @log_exception, @log_properties )";

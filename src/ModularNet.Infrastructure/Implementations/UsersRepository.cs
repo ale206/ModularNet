@@ -25,11 +25,11 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"SELECT id, first_name, last_name, email, username, phone, authenticated_on, azure_oid, user_oid, 
-                 is_verified_with_kyc, is_email_verified, is_phone_verified, document_expires_on, initialization_vector, is_subscriptions_password_set, 
+            @"SELECT id, first_name, last_name, email, username, authenticated_on, user_oid, 
+                  is_email_verified, initialization_vector, 
                  terms_and_conditions_accepted_on, email_verification_code, is_enabled, meta, created_on, modified_on, 
                  deleted_on 
-            FROM `user` 
+            FROM `modular_net`.`user` 
             WHERE email = @userEmail AND deleted_on IS NULL";
         await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
         var user = await connection.QueryFirstOrDefaultAsync<User>(sql, new
@@ -47,7 +47,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"INSERT INTO `user` 
+            @"INSERT INTO `modular_net`.`user` 
                 (`id`, `first_name`, `last_name`, `email`, `username`, `authenticated_on`, `user_oid`, 
                  `is_email_verified`, `initialization_vector`, `is_subscriptions_password_set`, 
                  `terms_and_conditions_accepted_on`, `email_verification_code`, `is_enabled`, `meta`, `created_on`)
@@ -67,7 +67,6 @@ public class UsersRepository : IUsersRepository
             user_oid = user.UserOid,
             is_email_verified = user.IsEmailVerified,
             initialization_vector = user.InitializationVector,
-            is_subscriptions_password_set = false,
             terms_and_conditions_accepted_on = user.TermsAndConditionsAcceptedOn,
             email_verification_code = user.EmailVerificationCode,
             is_enabled = true, // Always set to true because the enabling is managed by Firebase at login time.
@@ -83,7 +82,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `user` 
+            @"UPDATE `modular_net`.`user` 
                 SET authenticated_on = @authenticated_on, modified_on = @modified_on  
                 WHERE id = @user_id 
              ";
@@ -103,11 +102,11 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"SELECT id, first_name, last_name, email, username, phone, authenticated_on, azure_oid, user_oid,
-                 is_verified_with_kyc, is_email_verified, is_phone_verified, document_expires_on, initialization_vector, is_subscriptions_password_set, 
+            @"SELECT id, first_name, last_name, email, username, authenticated_on, user_oid,
+                 is_email_verified, initialization_vector, 
                  terms_and_conditions_accepted_on, email_verification_code, is_enabled, meta, created_on, modified_on, 
                  deleted_on 
-            FROM `user` 
+            FROM `modular_net`.`user` 
             WHERE id = @id AND deleted_on IS NULL";
         await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
         var user = await connection.QueryFirstOrDefaultAsync<User>(sql, new
@@ -118,82 +117,6 @@ public class UsersRepository : IUsersRepository
         return user;
     }
 
-    public async Task<bool> CheckIfKycVerified(Guid userId)
-    {
-        _logger.LogDebug($"Start repository method {nameof(CheckIfKycVerified)}");
-
-        var connectionString = await _dbConnectionFactory.GetDbConnectionString();
-
-        const string sql =
-            @"SELECT is_verified_with_kyc 
-            FROM `user` 
-            WHERE id = @id AND deleted_on IS NULL";
-        await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
-        var isVerifiedWithKyc = await connection.QueryFirstOrDefaultAsync<bool>(sql, new
-        {
-            id = userId
-        });
-
-        return isVerifiedWithKyc;
-    }
-
-    public async Task UpdateDocumentExpirationAndCompleteProcess(Guid userId, DateTime documentExpiresOn)
-    {
-        _logger.LogDebug($"Start repository method {nameof(UpdateDocumentExpirationAndCompleteProcess)}");
-
-        var connectionString = await _dbConnectionFactory.GetDbConnectionString();
-
-        const string sql =
-            @"UPDATE `user` 
-                SET `document_expires_on` = @document_expires_on, is_verified_with_kyc = @is_verified_with_kyc, modified_on = @modified_on
-                WHERE id = @id
-                ";
-        await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
-        await connection.ExecuteAsync(sql, new
-        {
-            id = userId,
-            document_expires_on = documentExpiresOn,
-            is_verified_with_kyc = 1,
-            modified_on = DateTime.UtcNow
-        });
-    }
-
-    public async Task SetSubscriptionsPassword(Guid userId, bool isSubscriptionPasswordSet)
-    {
-        _logger.LogDebug($"Start repository method {nameof(SetSubscriptionsPassword)}");
-
-        var connectionString = await _dbConnectionFactory.GetDbConnectionString();
-
-        const string sql =
-            @"UPDATE `user` 
-                SET `is_subscriptions_password_set` = @is_subscriptions_password_set, modified_on = @modified_on
-                WHERE id = @id
-                ";
-        await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
-        await connection.ExecuteAsync(sql, new
-        {
-            id = userId,
-            is_subscriptions_password_set = isSubscriptionPasswordSet,
-            modified_on = DateTime.UtcNow
-        });
-    }
-
-    public async Task<int> GetRegisteredUsersNumber()
-    {
-        _logger.LogDebug($"Start repository method {nameof(GetRegisteredUsersNumber)}");
-
-        var connectionString = await _dbConnectionFactory.GetDbConnectionString();
-
-        const string sql =
-            @"SELECT COUNT(id) 
-            FROM `user` 
-            WHERE is_email_verified = 1 AND deleted_on IS NULL";
-        await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
-        var registeredUsersNumber = await connection.ExecuteScalarAsync<int>(sql);
-
-        return registeredUsersNumber;
-    }
-
     public async Task SetUserEmailAsVerified(Guid userId)
     {
         _logger.LogDebug($"Start repository method {nameof(SetUserEmailAsVerified)}");
@@ -201,7 +124,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `user` 
+            @"UPDATE `modular_net`.`user` 
                 SET `is_email_verified` = @is_email_verified, modified_on = @modified_on, is_enabled = @is_enabled
                 WHERE id = @id
                 ";
@@ -222,7 +145,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `user` 
+            @"UPDATE `modular_net`.`user` 
                 SET is_enabled = @is_enabled, modified_on = @modified_on 
                 WHERE id = @id
                 ";
@@ -242,7 +165,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `user` 
+            @"UPDATE `modular_net`.`user` 
                 SET `user_oid` = @userOid, modified_on = @modified_on
                 WHERE id = @id
                 ";
@@ -264,7 +187,7 @@ public class UsersRepository : IUsersRepository
 
         const string sql =
             @"SELECT id 
-            FROM `user` 
+            FROM `modular_net`.`user` 
             WHERE email = @emailFromToken AND deleted_on IS NULL";
         await using var connection = _dbConnectionFactory.GetDbConnection(connectionString);
         var userId = await connection.QueryFirstOrDefaultAsync<Guid>(sql, new
@@ -282,7 +205,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `user` 
+            @"UPDATE `modular_net`.`user` 
                 SET `terms_and_conditions_accepted_on` = @terms_and_conditions_accepted_on, modified_on = @modified_on, is_enabled = @is_enabled
                 WHERE id = @id
                 ";
@@ -311,7 +234,7 @@ public class UsersRepository : IUsersRepository
         var connectionString = await _dbConnectionFactory.GetDbConnectionString();
 
         const string sql =
-            @"UPDATE `user` 
+            @"UPDATE `modular_net`.`user` 
                 SET `is_enabled` = @is_enabled, modified_on = @modified_on
                 WHERE id = @id
                 ";
