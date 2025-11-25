@@ -19,6 +19,7 @@ try
     Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Debug()
         .Enrich.FromLogContext()
+        .WriteTo.Console()              
         // Additional configurations and sinks
         .CreateBootstrapLogger();
 
