@@ -5,12 +5,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
-using ModularNet.Api.Helpers;
+using ModularNet.Api;
 using ModularNet.Api.Middlewares;
-using ModularNet.Business.Implementations;
-using ModularNet.Business.Interfaces;
-using ModularNet.Infrastructure.Implementations;
-using ModularNet.Infrastructure.Interfaces;
+using ModularNet.Business;
+using ModularNet.Infrastructure;
 using Serilog;
 using Serilog.Events;
 
@@ -147,7 +145,7 @@ async Task ConfigureServices(WebApplicationBuilder builder, IWebHostEnvironment 
     // Application Insights
     builder.Services.AddApplicationInsightsTelemetry();
 
-    RegisterDomainServices(builder.Services);
+    RegisterDomainServices(builder.Services, builder.Configuration);
 }
 
 void ConfigureMiddleware(WebApplication app)
@@ -183,41 +181,10 @@ void ConfigureMiddleware(WebApplication app)
     app.UseSerilogRequestLogging();
 }
 
-void RegisterDomainServices(IServiceCollection services)
+void RegisterDomainServices(IServiceCollection services, IConfiguration configuration)
 {
-    // Scoped Services
-    services.AddScoped<IAppSettingsManager, AppSettingsManager>();
-    services.AddScoped<IAuditsManager, AuditsManager>();
-    services.AddScoped<IAuditsRepository, AuditsRepository>();
-    services.AddScoped<IAuthManager, AuthManager>();
-    services.AddScoped<IAuthenticationService, AuthenticationService>();
-    services.AddScoped<ICacheManager, CacheManager>();
-    services.AddScoped<ICacheRepository, CacheRepository>();
-    services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
-    services.AddScoped<IEmailServiceManager, EmailServiceManager>();
-    services.AddScoped<IEmailServiceRepository, EmailServiceRepository>();
-    services.AddScoped<IEmailVerifierManager, EmailVerifierManager>();
-    services.AddScoped<IEncryptManager, EncryptManager>();
-    services.AddScoped<IHealthChecksManager, HealthChecksManager>();
-    services.AddScoped<IHealthChecksRepository, HealthChecksRepository>();
-    services.AddSingleton<IInMemoryCacheRepository, InMemoryCacheRepository>();
-    services.AddScoped<ILogsManager, LogsManager>();
-    services.AddScoped<ILogsRepository, LogsRepository>();
-    services.AddScoped<ISecretsManager, SecretsManager>();
-    services.AddScoped<ISecretsRepository, SecretsRepository>();
-    services.AddScoped<ITokenHelper, TokenHelper>();
-    services.AddScoped<IUsersManager, UsersManager>();
-    services.AddScoped<IUsersRepository, UsersRepository>();
-    services.AddScoped<IUsersSettingsManager, UsersSettingsManager>();
-    services.AddScoped<IUsersSettingsRepository, UsersSettingsRepository>();
-    services.AddScoped<IWebAppConfigsManager, WebAppConfigsManager>();
-    services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
-    services.AddScoped<IRedisRepository, RedisRepository>();
-
-    // HttpClient Services with Firebase
-    services.AddHttpClient<IJwtProvider, JwtProvider>((sp, httpClient) =>
-    {
-        var configuration = sp.GetRequiredService<IConfiguration>();
-        httpClient.BaseAddress = new Uri(configuration["AppSettings:FirebaseConfig:TokenUri"]);
-    });
+    // Register services from each layer
+    services.AddInfrastructureServices(configuration);
+    services.AddBusinessServices(configuration);
+    services.AddApiServices(configuration);
 }

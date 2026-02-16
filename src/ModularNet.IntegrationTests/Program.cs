@@ -1,9 +1,9 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
-using ModularNet.Business.Implementations;
+using ModularNet.Business;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Entities;
-using ModularNet.Infrastructure.Implementations;
+using ModularNet.Infrastructure;
 using ModularNet.Infrastructure.Interfaces;
 using ModularNet.IntegrationTests.Tests;
 
@@ -26,34 +26,12 @@ IConfiguration configuration = new ConfigurationBuilder()
 
 // Register Services
 builder.Services
-    .AddScoped<IAppSettingsManager, AppSettingsManager>()
-    .AddScoped<IAuditsManager, AuditsManager>()
-    .AddScoped<IAuditsRepository, AuditsRepository>()
-    .AddScoped<IAuthManager, AuthManager>()
-    .AddScoped<IAuthenticationService, AuthenticationService>()
-    .AddScoped<ICacheManager, CacheManager>()
-    .AddScoped<ICacheRepository, CacheRepository>()
-    .AddScoped<IDbConnectionFactory, DbConnectionFactory>()
-    .AddScoped<IEmailServiceManager, EmailServiceManager>()
-    .AddScoped<IEmailServiceRepository, EmailServiceRepository>()
-    .AddScoped<IEmailVerifierManager, EmailVerifierManager>()
-    .AddScoped<IEncryptManager, EncryptManager>()
-    .AddScoped<IHealthChecksManager, HealthChecksManager>()
-    .AddScoped<IHealthChecksRepository, HealthChecksRepository>()
-    .AddSingleton<IInMemoryCacheRepository, InMemoryCacheRepository>()
-    .AddScoped<ILogsManager, LogsManager>()
-    .AddScoped<ILogsRepository, LogsRepository>()
-    .AddScoped<ISecretsManager, SecretsManager>()
-    .AddScoped<ISecretsRepository, SecretsRepository>()
-    .AddScoped<IUsersManager, UsersManager>()
-    .AddScoped<IUsersRepository, UsersRepository>()
-    .AddScoped<IUsersSettingsManager, UsersSettingsManager>()
-    .AddScoped<IUsersSettingsRepository, UsersSettingsRepository>()
-    .AddScoped<IWebAppConfigsManager, WebAppConfigsManager>()
-    .AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>()
-    .AddScoped<IRedisRepository, RedisRepository>()
     .AddSingleton(configuration)
     .AddLogging();
+
+// Register services from each layer using extension methods
+builder.Services.AddInfrastructureServices(configuration);
+builder.Services.AddBusinessServices(configuration);
 
 FirebaseApp.Create(
     new AppOptions
@@ -61,12 +39,6 @@ FirebaseApp.Create(
         Credential = GoogleCredential.FromFile("modularNet-firebase-adminsdk-dev.json")
     }
 );
-
-builder.Services.AddHttpClient<IJwtProvider, JwtProvider>((sp, httpClient) =>
-{
-    var configuration = sp.GetRequiredService<IConfiguration>();
-    httpClient.BaseAddress = new Uri(configuration["AppSettings:FirebaseConfig:TokenUri"]);
-});
 
 var serviceProvider = builder.Services.BuildServiceProvider();
 
