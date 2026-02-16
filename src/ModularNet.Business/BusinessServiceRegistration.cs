@@ -9,6 +9,9 @@ public static class BusinessServiceRegistration
 {
     public static IServiceCollection AddBusinessServices(this IServiceCollection services, IConfiguration configuration)
     {
+        // Configuration parameter is included for consistency and future extensibility
+        // (e.g., for conditional registration based on configuration values)
+        
         // Register Business managers
         services.AddScoped<IAppSettingsManager, AppSettingsManager>();
         services.AddScoped<IAuditsManager, AuditsManager>();
