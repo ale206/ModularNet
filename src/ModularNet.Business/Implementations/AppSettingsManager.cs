@@ -1,22 +1,22 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Entities;
+using ModularNet.Infrastructure.Interfaces;
 
 namespace ModularNet.Business.Implementations;
 
 public class AppSettingsManager : IAppSettingsManager
 {
-    private readonly IConfiguration _configuration;
+    private readonly IAppSettingsRepository _appSettingsRepository;
     private readonly IHostingEnvironment _hostingEnvironment;
     private readonly ILogger<AppSettingsManager> _logger;
     private readonly ISecretsManager _secretsManager;
 
-    public AppSettingsManager(IConfiguration configuration, IHostingEnvironment hostingEnvironment,
+    public AppSettingsManager(IAppSettingsRepository appSettingsRepository, IHostingEnvironment hostingEnvironment,
         ISecretsManager secretsManager, ILogger<AppSettingsManager> logger)
     {
-        _configuration = configuration;
+        _appSettingsRepository = appSettingsRepository;
         _hostingEnvironment = hostingEnvironment;
         _secretsManager = secretsManager;
         _logger = logger;
@@ -32,7 +32,7 @@ public class AppSettingsManager : IAppSettingsManager
     {
         _logger.LogDebug($"Start method {nameof(GetAppSettings)}");
 
-        var appSettings = _configuration.GetSection("AppSettings").Get<AppSettings>() ?? new AppSettings();
+        var appSettings = _appSettingsRepository.GetAppSettings();
 
         // If Development, return current app settings
         if (_hostingEnvironment.IsDevelopment())

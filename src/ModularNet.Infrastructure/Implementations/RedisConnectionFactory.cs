@@ -25,7 +25,7 @@ public class RedisConnectionFactory : IRedisConnectionFactory
 
         _lazyConnection = new Lazy<Task<ConnectionMultiplexer>>(InitializeConnectionAsync);
 
-        _logger.LogDebug($"{nameof(DbConnectionFactory)} constructed");
+        _logger.LogDebug($"{nameof(RedisConnectionFactory)} constructed");
     }
 
     public async Task<IDatabase> GetRedisDatabase(string connectionString)
@@ -47,7 +47,7 @@ public class RedisConnectionFactory : IRedisConnectionFactory
                    throw new Exception("Error getting Redis Connection String");
 
         //TODO: Create If for each environment when ready
-        //else if(_hostingEnvironment.EnvironmentName == "STG") 
+        //else if(_hostingEnvironment.EnvironmentName == "STG")
 
         return await _secretsRepository.GetSecret("redis-connection-string") ??
                throw new Exception("Error Getting Redis Connection String from Secrets");

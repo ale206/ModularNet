@@ -4,5 +4,5 @@ namespace ModularNet.Infrastructure.Interfaces;
 
 public interface IAppSettingsRepository
 {
-    Task<AppSettings> GetAppSettings();
+    AppSettings GetAppSettings();
 }

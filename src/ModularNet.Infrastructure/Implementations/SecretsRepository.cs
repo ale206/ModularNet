@@ -3,7 +3,6 @@ using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModularNet.Domain.Entities;
-using ModularNet.Domain.Enums;
 using ModularNet.Infrastructure.Interfaces;
 
 namespace ModularNet.Infrastructure.Implementations;
@@ -11,14 +10,14 @@ namespace ModularNet.Infrastructure.Implementations;
 public class SecretsRepository : ISecretsRepository
 {
     private readonly AppSettings _appSettings;
-    private readonly ICacheRepository _cacheRepository;
+    private readonly IInMemoryCacheRepository _inMemoryCacheRepository;
     private readonly ILogger<SecretsRepository> _logger;
 
     public SecretsRepository(IConfiguration configuration, ILogger<SecretsRepository> logger,
-        ICacheRepository cacheRepository)
+        IInMemoryCacheRepository inMemoryCacheRepository)
     {
         _logger = logger;
-        _cacheRepository = cacheRepository;
+        _inMemoryCacheRepository = inMemoryCacheRepository;
         //TODO: Refactor to have this similar to what has been done in Business
         _appSettings = configuration.GetSection("AppSettings").Get<AppSettings>() ??
                        throw new Exception("Error getting AppSettings");
@@ -51,14 +50,14 @@ public class SecretsRepository : ISecretsRepository
     {
         _logger.LogDebug($"Start method {nameof(GetSecretAndCacheIt)}");
 
-        var secretFromCache = await _cacheRepository.GetFromCache<string>(secretName, CacheType.InMemory);
+        var secretFromCache = await _inMemoryCacheRepository.GetFromInMemoryCache<string>(secretName);
 
         if (secretFromCache == null)
         {
             var secretValue = await GetSecret(secretName) ?? string.Empty;
 
             var cacheExpirationInSeconds = 604800; // One week
-            await _cacheRepository.SaveInCache(secretName, secretValue, CacheType.InMemory, cacheExpirationInSeconds);
+            await _inMemoryCacheRepository.SaveToInMemoryCache(secretName, secretValue, cacheExpirationInSeconds);
 
             return secretValue;
         }

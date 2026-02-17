@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using ModularNet.Domain.Entities;
 using ModularNet.Infrastructure.Interfaces;
 using Newtonsoft.Json;
 using StackExchange.Redis;
@@ -9,23 +11,26 @@ namespace ModularNet.Infrastructure.Implementations;
 public class RedisRepository : IRedisRepository
 {
     private const string RedisPrefixForLocalEnvironment = "_local_";
+    private readonly bool _redisCacheEnabled;
     private readonly IHostingEnvironment _hostingEnvironment;
     private readonly ILogger<RedisRepository> _logger;
     private readonly IRedisConnectionFactory _redisConnectionFactory;
 
     public RedisRepository(IRedisConnectionFactory redisConnectionFactory, ILogger<RedisRepository> logger,
-        IHostingEnvironment hostingEnvironment)
+        IHostingEnvironment hostingEnvironment, IConfiguration configuration)
     {
         _redisConnectionFactory = redisConnectionFactory;
         _logger = logger;
         _hostingEnvironment = hostingEnvironment;
+        var appSettings = configuration.GetSection("AppSettings").Get<AppSettings>() ?? new AppSettings();
+        _redisCacheEnabled = appSettings.ModularNetConfig.RedisCacheEnabled;
     }
 
     public async Task SaveToRedisCache<T>(string itemKey, T value, int cacheExpirationSeconds)
     {
         _logger.LogDebug($"Start repository method {nameof(SaveToRedisCache)}");
 
-        if (value == null)
+        if (!_redisCacheEnabled || value == null)
             return;
 
         var connectionString = await _redisConnectionFactory.GetRedisConnectionString();
@@ -53,6 +58,8 @@ public class RedisRepository : IRedisRepository
     {
         _logger.LogDebug($"Start repository method {nameof(GetFromRedisCache)}");
 
+        if (!_redisCacheEnabled) return default;
+
         var connectionString = await _redisConnectionFactory.GetRedisConnectionString();
         var redisDb = await _redisConnectionFactory.GetRedisDatabase(connectionString);
 
@@ -73,6 +80,8 @@ public class RedisRepository : IRedisRepository
 
     public async Task RemoveFromRedisCache(string itemKey)
     {
+        if (!_redisCacheEnabled) return;
+
         var connectionString = await _redisConnectionFactory.GetRedisConnectionString();
         var redisDb = await _redisConnectionFactory.GetRedisDatabase(connectionString);
 

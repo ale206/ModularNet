@@ -13,51 +13,74 @@ namespace ModularNet.UnitTests;
 public class CacheManagerTests
 {
     private readonly ICacheManager _cacheManager;
-    private readonly Mock<ICacheRepository> _cacheRepositoryMock = new();
+    private readonly Mock<IInMemoryCacheRepository> _inMemoryCacheRepositoryMock = new();
+    private readonly Mock<IRedisRepository> _redisRepositoryMock = new();
     private readonly Mock<ILogger<CacheManager>> _loggerMock = new();
 
     public CacheManagerTests()
     {
-        _cacheManager = new CacheManager(_loggerMock.Object, _cacheRepositoryMock.Object);
+        _cacheManager = new CacheManager(_loggerMock.Object, _inMemoryCacheRepositoryMock.Object,
+            _redisRepositoryMock.Object);
     }
 
     [Fact]
-    public async Task SaveInCache_ShouldCallRepository()
+    public async Task SaveInCache_InMemory_ShouldCallInMemoryRepository()
     {
         // Arrange
         var itemKey = "testKey";
         var value = "testValue";
-        var cacheType = CacheType.InMemory;
         var expirationSeconds = 30;
 
         // Act
-        await _cacheManager.SaveInCache(itemKey, value, cacheType, expirationSeconds);
+        await _cacheManager.SaveInCache(itemKey, value, CacheType.InMemory, expirationSeconds);
 
         // Assert
-        _cacheRepositoryMock.Verify(
-            x => x.SaveInCache(itemKey, value, cacheType, expirationSeconds),
+        _inMemoryCacheRepositoryMock.Verify(
+            x => x.SaveToInMemoryCache(itemKey, value, expirationSeconds),
             Times.Once);
+        _redisRepositoryMock.Verify(
+            x => x.SaveToRedisCache(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task GetFromCache_ShouldCallRepository()
+    public async Task SaveInCache_Redis_ShouldCallRedisRepository()
+    {
+        // Arrange
+        var itemKey = "testKey";
+        var value = "testValue";
+        var expirationSeconds = 30;
+
+        // Act
+        await _cacheManager.SaveInCache(itemKey, value, CacheType.Redis, expirationSeconds);
+
+        // Assert
+        _redisRepositoryMock.Verify(
+            x => x.SaveToRedisCache(itemKey, value, expirationSeconds),
+            Times.Once);
+        _inMemoryCacheRepositoryMock.Verify(
+            x => x.SaveToInMemoryCache(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFromCache_InMemory_ShouldCallInMemoryRepository()
     {
         // Arrange
         var itemKey = "testKey";
         var expectedValue = "testValue";
-        var cacheType = CacheType.InMemory;
 
-        _cacheRepositoryMock
-            .Setup(x => x.GetFromCache<string>(itemKey, cacheType))
+        _inMemoryCacheRepositoryMock
+            .Setup(x => x.GetFromInMemoryCache<string>(itemKey))
             .ReturnsAsync(expectedValue);
 
         // Act
-        var result = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
+        var result = await _cacheManager.GetFromCache<string>(itemKey, CacheType.InMemory);
 
         // Assert
         Assert.Equal(expectedValue, result);
-        _cacheRepositoryMock.Verify(
-            x => x.GetFromCache<string>(itemKey, cacheType),
+        _inMemoryCacheRepositoryMock.Verify(
+            x => x.GetFromInMemoryCache<string>(itemKey),
             Times.Once);
     }
 
@@ -66,32 +89,45 @@ public class CacheManagerTests
     {
         // Arrange
         var itemKey = "nonExistentKey";
-        var cacheType = CacheType.InMemory;
 
-        _cacheRepositoryMock
-            .Setup(x => x.GetFromCache<string>(itemKey, cacheType))
+        _inMemoryCacheRepositoryMock
+            .Setup(x => x.GetFromInMemoryCache<string>(itemKey))
             .ReturnsAsync((string)null);
 
         // Act
-        var result = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
+        var result = await _cacheManager.GetFromCache<string>(itemKey, CacheType.InMemory);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task RemoveFromCache_ShouldCallRepository()
+    public async Task RemoveFromCache_InMemory_ShouldCallInMemoryRepository()
     {
         // Arrange
         var itemKey = "testKey";
-        var cacheType = CacheType.InMemory;
 
         // Act
-        await _cacheManager.RemoveFromCache(itemKey, cacheType);
+        await _cacheManager.RemoveFromCache(itemKey, CacheType.InMemory);
 
         // Assert
-        _cacheRepositoryMock.Verify(
-            x => x.RemoveFromCache(itemKey, cacheType),
+        _inMemoryCacheRepositoryMock.Verify(
+            x => x.RemoveFromInMemoryCache(itemKey),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveFromCache_Redis_ShouldCallRedisRepository()
+    {
+        // Arrange
+        var itemKey = "testKey";
+
+        // Act
+        await _cacheManager.RemoveFromCache(itemKey, CacheType.Redis);
+
+        // Assert
+        _redisRepositoryMock.Verify(
+            x => x.RemoveFromRedisCache(itemKey),
             Times.Once);
     }
 }

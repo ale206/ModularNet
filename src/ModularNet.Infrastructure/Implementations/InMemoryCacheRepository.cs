@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModularNet.Domain.Entities;
 using ModularNet.Infrastructure.Interfaces;
@@ -6,17 +7,22 @@ namespace ModularNet.Infrastructure.Implementations;
 
 public class InMemoryCacheRepository : IInMemoryCacheRepository
 {
+    private readonly bool _memoryCacheEnabled;
     private readonly ILogger<InMemoryCacheRepository> _logger;
     private readonly List<InMemoryCacheItem> _memoryCacheItems = new();
     private readonly object _syncLock = new(); // Lock object
 
-    public InMemoryCacheRepository(ILogger<InMemoryCacheRepository> logger)
+    public InMemoryCacheRepository(ILogger<InMemoryCacheRepository> logger, IConfiguration configuration)
     {
         _logger = logger;
+        var appSettings = configuration.GetSection("AppSettings").Get<AppSettings>() ?? new AppSettings();
+        _memoryCacheEnabled = appSettings.ModularNetConfig.MemoryCacheEnabled;
     }
 
     public async Task SaveToInMemoryCache<T>(string item, T value, int cacheExpirationSeconds)
     {
+        if (!_memoryCacheEnabled) return;
+
         lock (_syncLock)
         {
             _logger.LogDebug($"Start method {nameof(SaveToInMemoryCache)}");
@@ -43,6 +49,8 @@ public class InMemoryCacheRepository : IInMemoryCacheRepository
 
     public async Task<T?> GetFromInMemoryCache<T>(string item)
     {
+        if (!_memoryCacheEnabled) return default;
+
         lock (_syncLock)
         {
             _logger.LogDebug($"Start method {nameof(GetFromInMemoryCache)}");
@@ -60,6 +68,8 @@ public class InMemoryCacheRepository : IInMemoryCacheRepository
 
     public async Task RemoveFromInMemoryCache(string item)
     {
+        if (!_memoryCacheEnabled) return;
+
         lock (_syncLock)
         {
             _logger.LogDebug($"Start method {nameof(RemoveFromInMemoryCache)}");
@@ -69,6 +79,8 @@ public class InMemoryCacheRepository : IInMemoryCacheRepository
 
     public async Task RemoveExpiredItemsFromInMemoryCache()
     {
+        if (!_memoryCacheEnabled) return;
+
         lock (_syncLock)
         {
             _logger.LogDebug($"Start method {nameof(RemoveExpiredItemsFromInMemoryCache)}");
