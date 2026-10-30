@@ -7,12 +7,12 @@ namespace ModularNet.Infrastructure.Implementations;
 
 public class UsersSettingsRepository : IUsersSettingsRepository
 {
+    private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly ILogger<UsersSettingsRepository> _logger;
-    private readonly IUnitOfWork _unitOfWork;
 
-    public UsersSettingsRepository(IUnitOfWork unitOfWork, ILogger<UsersSettingsRepository> logger)
+    public UsersSettingsRepository(IDbConnectionFactory dbConnectionFactory, ILogger<UsersSettingsRepository> logger)
     {
-        _unitOfWork = unitOfWork;
+        _dbConnectionFactory = dbConnectionFactory;
         _logger = logger;
 
         _logger.LogDebug($"{nameof(UsersSettingsRepository)} constructed");
@@ -22,7 +22,7 @@ public class UsersSettingsRepository : IUsersSettingsRepository
     {
         _logger.LogDebug($"Start repository method {nameof(GetUserSettings)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"SELECT `id`, `user_id`, `setting_name`, `setting_value`, `is_enabled`, `meta`,
@@ -33,14 +33,14 @@ public class UsersSettingsRepository : IUsersSettingsRepository
         return await connection.QueryAsync<UserSettingDto>(sql, new
         {
             user_id = userId
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task CreateUserSetting(UserSetting userSetting)
     {
         _logger.LogDebug($"Start repository method {nameof(CreateUserSetting)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"INSERT INTO `user_setting` 
@@ -58,14 +58,14 @@ public class UsersSettingsRepository : IUsersSettingsRepository
             is_enabled = true,
             meta = userSetting.Meta,
             created_on = DateTime.UtcNow
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task UpdateUserSetting(UserSetting userSetting)
     {
         _logger.LogDebug($"Start repository method {nameof(UpdateUserSetting)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `user_setting` 
@@ -80,6 +80,6 @@ public class UsersSettingsRepository : IUsersSettingsRepository
             is_enabled = userSetting.IsEnabled,
             meta = userSetting.Meta,
             modified_on = DateTime.UtcNow
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 }

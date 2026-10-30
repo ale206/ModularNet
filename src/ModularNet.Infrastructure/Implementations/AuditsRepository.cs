@@ -7,12 +7,12 @@ namespace ModularNet.Infrastructure.Implementations;
 
 public class AuditsRepository : IAuditsRepository
 {
+    private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly ILogger<AuditsRepository> _logger;
-    private readonly IUnitOfWork _unitOfWork;
 
-    public AuditsRepository(IUnitOfWork unitOfWork, ILogger<AuditsRepository> logger)
+    public AuditsRepository(IDbConnectionFactory dbConnectionFactory, ILogger<AuditsRepository> logger)
     {
-        _unitOfWork = unitOfWork;
+        _dbConnectionFactory = dbConnectionFactory;
         _logger = logger;
 
         _logger.LogDebug($"{nameof(AuditsRepository)} constructed");
@@ -27,13 +27,13 @@ public class AuditsRepository : IAuditsRepository
                 (`audit_timestamp`, `user_id`, `audit_type`, `meta`)
                 VALUES 
                 (@audit_timestamp, @user_id, @audit_type, @meta)";
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
         await connection.ExecuteAsync(sql, new
         {
             audit_timestamp = DateTime.UtcNow,
             user_id = modularNetAudit.UserId,
             audit_type = modularNetAudit.AuditType,
             meta = modularNetAudit.Meta
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 }

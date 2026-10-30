@@ -20,7 +20,7 @@ Rules:
 - Api classes can only talk to Business, by injecting `*Manager` interfaces. They must never use Infrastructure directly.
 - A Business class can talk to other Business classes only through their `*Manager` interfaces.
 - A Business class accesses Infrastructure through its related `*Repository` class. When coordinating atomic transactions across multiple repositories without distributed transaction (MSDTC) escalation, Business classes inject `IUnitOfWork`.
-- `*Repository` classes are the only access point to external services, and share the connection and transaction provided by `IUnitOfWork`.
+- `*Repository` classes are the only access point to external services, and share the scoped connection and active transaction provided by `IDbConnectionFactory`.
 - Each layer owns its own interfaces and implementations. An interface and its implementation always live in the same layer: `IXxxManager` and `XxxManager` in Business, `IXxxRepository` and `XxxRepository` in Infrastructure (as well as `IUnitOfWork` and `UnitOfWork`). Other layers consume the interface but never define it.
 
 ### 1.2 Naming

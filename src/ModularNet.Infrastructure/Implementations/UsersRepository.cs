@@ -7,12 +7,12 @@ namespace ModularNet.Infrastructure.Implementations;
 
 public class UsersRepository : IUsersRepository
 {
+    private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly ILogger<UsersRepository> _logger;
-    private readonly IUnitOfWork _unitOfWork;
 
-    public UsersRepository(IUnitOfWork unitOfWork, ILogger<UsersRepository> logger)
+    public UsersRepository(IDbConnectionFactory dbConnectionFactory, ILogger<UsersRepository> logger)
     {
-        _unitOfWork = unitOfWork;
+        _dbConnectionFactory = dbConnectionFactory;
         _logger = logger;
 
         _logger.LogDebug($"{nameof(UsersRepository)} constructed");
@@ -22,7 +22,7 @@ public class UsersRepository : IUsersRepository
     {
         _logger.LogDebug($"Start repository method {nameof(GetUserByEmail)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"SELECT id, first_name, last_name, email, username, authenticated_on, user_oid, 
@@ -35,14 +35,14 @@ public class UsersRepository : IUsersRepository
         return await connection.QueryFirstOrDefaultAsync<User>(sql, new
         {
             userEmail
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task RegisterUser(User user)
     {
         _logger.LogDebug($"Start repository method {nameof(RegisterUser)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"INSERT INTO `modular_net`.`user` 
@@ -70,14 +70,14 @@ public class UsersRepository : IUsersRepository
             is_enabled = true, // Always set to true because the enabling is managed by Firebase at login time.
             meta = user.Meta,
             created_on = user.CreatedOn
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task UpdateUserLoginDate(Guid userId, DateTime userAuthenticatedOn)
     {
         _logger.LogDebug($"Start repository method {nameof(UpdateUserLoginDate)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `modular_net`.`user` 
@@ -90,14 +90,14 @@ public class UsersRepository : IUsersRepository
             authenticated_on = userAuthenticatedOn,
             user_id = userId,
             modified_on = DateTime.UtcNow
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task<User?> GetUserById(Guid userId)
     {
         _logger.LogDebug($"Start repository method {nameof(GetUserById)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"SELECT id, first_name, last_name, email, username, authenticated_on, user_oid,
@@ -110,14 +110,14 @@ public class UsersRepository : IUsersRepository
         return await connection.QueryFirstOrDefaultAsync<User>(sql, new
         {
             id = userId
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task SetUserEmailAsVerified(Guid userId)
     {
         _logger.LogDebug($"Start repository method {nameof(SetUserEmailAsVerified)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `modular_net`.`user` 
@@ -131,14 +131,14 @@ public class UsersRepository : IUsersRepository
             is_email_verified = true,
             is_enabled = true,
             modified_on = DateTime.UtcNow
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task EnableUser(Guid userId)
     {
         _logger.LogDebug($"Start repository method {nameof(EnableUser)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `modular_net`.`user` 
@@ -151,14 +151,14 @@ public class UsersRepository : IUsersRepository
             id = userId,
             is_enabled = true,
             modified_on = DateTime.UtcNow
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task UpdateUserOid(Guid userId, string? userOid)
     {
         _logger.LogDebug($"Start repository method {nameof(UpdateUserOid)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `modular_net`.`user` 
@@ -171,14 +171,14 @@ public class UsersRepository : IUsersRepository
             id = userId,
             userOid,
             modified_on = DateTime.UtcNow
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task<Guid> GetUserIdByEmail(string emailFromToken)
     {
         _logger.LogDebug($"Start repository method {nameof(GetUserIdByEmail)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"SELECT id 
@@ -188,14 +188,14 @@ public class UsersRepository : IUsersRepository
         return await connection.QueryFirstOrDefaultAsync<Guid>(sql, new
         {
             emailFromToken
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     public async Task SetTermsAndConditionsAsAccepted(Guid userId)
     {
         _logger.LogDebug($"Start repository method {nameof(SetTermsAndConditionsAsAccepted)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `modular_net`.`user` 
@@ -210,7 +210,7 @@ public class UsersRepository : IUsersRepository
             terms_and_conditions_accepted_on = now,
             is_enabled = true,
             modified_on = now
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 
     /// <summary>
@@ -223,7 +223,7 @@ public class UsersRepository : IUsersRepository
     {
         _logger.LogDebug($"Start repository method {nameof(DeactivateAccount)}");
 
-        var connection = await _unitOfWork.GetConnection();
+        var connection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `modular_net`.`user` 
@@ -237,6 +237,6 @@ public class UsersRepository : IUsersRepository
             id = userId,
             is_enabled = false,
             modified_on = now
-        }, transaction: _unitOfWork.Transaction);
+        }, transaction: _dbConnectionFactory.CurrentTransaction);
     }
 }
