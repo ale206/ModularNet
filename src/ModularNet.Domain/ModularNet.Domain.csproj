@@ -7,14 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Azure.Communication.Email" Version="1.0.1"/>
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
-        <PackageReference Include="System.Text.Encodings.Web" Version="9.0.4"/>
+        <PackageReference Include="Azure.Communication.Email" Version="1.1.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.14" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="System.Text.Encodings.Web" Version="10.0.14" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ModularNet.Shared\ModularNet.Shared.csproj"/>
+        <ProjectReference Include="..\ModularNet.Shared\ModularNet.Shared.csproj" />
     </ItemGroup>
 
 </Project>
