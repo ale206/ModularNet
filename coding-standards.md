@@ -65,27 +65,44 @@ ModularNet is inspired by, and very similar to, Onion Architecture (and Clean Ar
   ```
 
 - When a variable holds a single object of a class, do not give it a generic or shortened name (`item`, `obj`, `data`, `result`, `u`, `us`). If you need more than one variable of the same class, keep the class name and add the role to it (e.g. `sourceUser` and `targetUser`).
-- When a method takes two or more parameters of different classes, each parameter takes the name of its class, and the call passes variables that carry the same names. The reader can then tell which class each argument is, both in the method signature and at the call site.
+- When a method or constructor takes two or more parameters of different classes (or interfaces), each parameter takes the name of its class (in camelCase), and the call passes variables that carry the same names. The reader can then tell which class each argument is, both in the method signature and at the call site.
 
   ```csharp
-  public async Task<UserSetting> AssignSettingToUser(User user, UserSetting userSetting)
+  // Real example in constructor injection (UsersSettingsManager.cs):
+  public UsersSettingsManager(IUsersSettingsRepository usersSettingsRepository, ICacheManager cacheManager)
+  {
+      _usersSettingsRepository = usersSettingsRepository;
+      _cacheManager = cacheManager;
+  }
+
+  // Real example in middleware (UserIdExtractionMiddleware.cs):
+  public async Task InvokeAsync(HttpContext context, IUsersManager usersManager, ITokenHelper tokenHelper, ICacheManager cacheManager)
+  {
+      // ...
+  }
+  ```
+
+  Similarly, when implementing new methods that accept domain entities or requests:
+
+  ```csharp
+  public async Task CreateAuditForUser(User user, ModularNetAudit modularNetAudit)
   {
       // ...
   }
 
   // Call site: the arguments have the same names as the parameters
   var user = await usersRepository.GetUserById(userId);
-  var userSetting = await usersSettingsRepository.GetUserSettingById(userSettingId);
+  var modularNetAudit = new ModularNetAudit { UserId = user.Id, AuditType = AuditType.Login };
 
-  var assignedUserSetting = await usersSettingsManager.AssignSettingToUser(user, userSetting);
+  await auditsManager.CreateAuditForUser(user, modularNetAudit);
   ```
 
   Not allowed, because the names do not say which class each one is:
 
   ```csharp
-  public async Task<UserSetting> AssignSettingToUser(User u, UserSetting us) { ... }
+  public async Task CreateAuditForUser(User u, ModularNetAudit a) { ... }
 
-  var result = await usersSettingsManager.AssignSettingToUser(item, data);
+  var result = await auditsManager.CreateAuditForUser(item, data);
   ```
 
 - Variables, parameters and fields must have clear, descriptive names. Do not use abbreviations (e.g. `userId`, not `uId`; `registerUserRequest`, not `req`). A value that is not a class instance (an id, a name, a count) is named after what it represents (`userId`, `secretName`).
@@ -94,7 +111,8 @@ ModularNet is inspired by, and very similar to, Onion Architecture (and Clean Ar
 ### 2.2 Logging and exceptions
 
 - Every method has its own log entry, and every exception is logged.
-- A global middleware (`CustomExceptionMiddleware` in Api) catches unhandled exceptions and turns them into HTTP responses. Do not add try/catch blocks only to produce an error response. Throw the appropriate exception (custom exceptions live in `ModularNet.Domain/CustomExceptions`) and let the middleware handle it. Catch an exception only when the code can do something useful with it, and log it when you do.
+- Controllers catch exceptions, log the error details with the injected `ILogger`, and return appropriate HTTP error responses (e.g. `500 Internal Server Error`).
+- Business and Infrastructure methods throw specific or domain exceptions (custom exceptions live in `ModularNet.Domain/CustomExceptions`, such as `EncryptionException` and `ValidationException`). Catch an exception only when the code can handle it, wrap it in a domain exception, or perform cleanup, and always log it when you do. If a centralized exception-handling middleware is added in the future, it should catch unhandled exceptions globally and map them to HTTP responses.
 
 ### 2.3 Async
 
