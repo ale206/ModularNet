@@ -15,11 +15,13 @@ public class UsersManager : IUsersManager
     private readonly IEmailServiceManager _emailServiceManager;
     private readonly IEncryptManager _encryptManager;
     private readonly ILogger<UsersManager> _logger;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IUsersRepository _usersRepository;
 
     public UsersManager(IUsersRepository usersRepository, ILogger<UsersManager> logger, IEncryptManager encryptManager,
         IEmailServiceManager emailServiceManager, IAuditsManager auditsManager,
-        IAuthenticationService authenticationService, IAppSettingsManager appSettingsManager)
+        IAuthenticationService authenticationService, IAppSettingsManager appSettingsManager,
+        IUnitOfWork unitOfWork)
     {
         _usersRepository = usersRepository;
         _logger = logger;
@@ -28,6 +30,7 @@ public class UsersManager : IUsersManager
         _auditsManager = auditsManager;
         _authenticationService = authenticationService;
         _appSettingsManager = appSettingsManager;
+        _unitOfWork = unitOfWork;
 
         _logger.LogDebug($"{nameof(UsersManager)} constructed");
     }
@@ -90,12 +93,24 @@ public class UsersManager : IUsersManager
     {
         _logger.LogDebug($"Start method {nameof(LoginUser)}");
 
-        // Audit login
-        var modularNetAudit = new ModularNetAudit { AuditType = AuditType.Login, UserId = userSignInRequest.Id };
-        await _auditsManager.WriteAuditToDb(modularNetAudit);
+        await _unitOfWork.BeginTransaction();
+        try
+        {
+            // Audit login
+            var modularNetAudit = new ModularNetAudit { AuditType = AuditType.Login, UserId = userSignInRequest.Id };
+            await _auditsManager.WriteAuditToDb(modularNetAudit);
 
-        await _usersRepository.UpdateUserLoginDate(userSignInRequest.Id,
-            userSignInRequest.AuthenticatedOn ?? DateTime.UtcNow);
+            await _usersRepository.UpdateUserLoginDate(userSignInRequest.Id,
+                userSignInRequest.AuthenticatedOn ?? DateTime.UtcNow);
+
+            await _unitOfWork.Commit();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error during login transaction for user {userSignInRequest.Id}");
+            await _unitOfWork.Rollback();
+            throw;
+        }
     }
 
     public async Task<User?> GetUserByEmail(string email)

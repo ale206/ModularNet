@@ -9,12 +9,14 @@ namespace ModularNet.Business.Implementations;
 public class UsersSettingsManager : IUsersSettingsManager
 {
     private readonly ICacheManager _cacheManager;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IUsersSettingsRepository _usersSettingsRepository;
 
-    public UsersSettingsManager(IUsersSettingsRepository usersSettingsRepository, ICacheManager cacheManager)
+    public UsersSettingsManager(IUsersSettingsRepository usersSettingsRepository, ICacheManager cacheManager, IUnitOfWork unitOfWork)
     {
         _usersSettingsRepository = usersSettingsRepository;
         _cacheManager = cacheManager;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<List<UserSetting>> GetUserSettingsByUserId(Guid userId)
@@ -91,13 +93,24 @@ public class UsersSettingsManager : IUsersSettingsManager
             }
         }
 
-        foreach (var userSetting in settingsToUpdate)
-            // Update settings in the repository
-            await _usersSettingsRepository.UpdateUserSetting(userSetting);
+        await _unitOfWork.BeginTransaction();
+        try
+        {
+            foreach (var userSetting in settingsToUpdate)
+                // Update settings in the repository
+                await _usersSettingsRepository.UpdateUserSetting(userSetting);
 
-        foreach (var userSetting in settingsToCreate)
-            // Create new settings in the repository
-            await _usersSettingsRepository.CreateUserSetting(userSetting);
+            foreach (var userSetting in settingsToCreate)
+                // Create new settings in the repository
+                await _usersSettingsRepository.CreateUserSetting(userSetting);
+
+            await _unitOfWork.Commit();
+        }
+        catch
+        {
+            await _unitOfWork.Rollback();
+            throw;
+        }
 
         var allSettings = settingsToUpdate.Concat(settingsToCreate).ToList();
 
