@@ -47,11 +47,11 @@ public class DbConnectionFactoryTests
         var dbConnectionFactory = CreateDbConnectionFactory();
 
         // Act
-        var connection = await dbConnectionFactory.GetConnection();
+        var dbConnection = await dbConnectionFactory.GetConnection();
 
         // Assert
-        Assert.NotNull(connection);
-        Assert.Equal(ConnectionState.Open, connection.State);
+        Assert.NotNull(dbConnection);
+        Assert.Equal(ConnectionState.Open, dbConnection.State);
         Assert.Equal(1, _testDbConnection.OpenAsyncCallCount);
     }
 
@@ -62,11 +62,11 @@ public class DbConnectionFactoryTests
         var dbConnectionFactory = CreateDbConnectionFactory();
 
         // Act
-        var firstConnection = await dbConnectionFactory.GetConnection();
-        var secondConnection = await dbConnectionFactory.GetConnection();
+        var firstDbConnection = await dbConnectionFactory.GetConnection();
+        var secondDbConnection = await dbConnectionFactory.GetConnection();
 
         // Assert
-        Assert.Same(firstConnection, secondConnection);
+        Assert.Same(firstDbConnection, secondDbConnection);
         Assert.Equal(1, _testDbConnection.OpenAsyncCallCount);
     }
 
@@ -80,8 +80,8 @@ public class DbConnectionFactoryTests
         await dbConnectionFactory.BeginTransaction();
 
         // Assert
-        Assert.NotNull(dbConnectionFactory.CurrentTransaction);
-        Assert.Same(_testDbConnection.CurrentTestTransaction, dbConnectionFactory.CurrentTransaction);
+        Assert.NotNull(dbConnectionFactory.CurrentDbTransaction);
+        Assert.Same(_testDbConnection.CurrentTestTransaction, dbConnectionFactory.CurrentDbTransaction);
     }
 
     [Fact]
@@ -101,15 +101,15 @@ public class DbConnectionFactoryTests
         // Arrange
         var dbConnectionFactory = CreateDbConnectionFactory();
         await dbConnectionFactory.BeginTransaction();
-        var transaction = _testDbConnection.CurrentTestTransaction!;
+        var dbTransaction = _testDbConnection.CurrentTestTransaction!;
 
         // Act
         await dbConnectionFactory.CommitTransaction();
 
         // Assert
-        Assert.Null(dbConnectionFactory.CurrentTransaction);
-        Assert.Equal(1, transaction.CommitCallCount);
-        Assert.True(transaction.DisposeCallCount > 0);
+        Assert.Null(dbConnectionFactory.CurrentDbTransaction);
+        Assert.Equal(1, dbTransaction.CommitCallCount);
+        Assert.True(dbTransaction.DisposeCallCount > 0);
     }
 
     [Fact]
@@ -128,15 +128,15 @@ public class DbConnectionFactoryTests
         // Arrange
         var dbConnectionFactory = CreateDbConnectionFactory();
         await dbConnectionFactory.BeginTransaction();
-        var transaction = _testDbConnection.CurrentTestTransaction!;
+        var dbTransaction = _testDbConnection.CurrentTestTransaction!;
 
         // Act
         await dbConnectionFactory.RollbackTransaction();
 
         // Assert
-        Assert.Null(dbConnectionFactory.CurrentTransaction);
-        Assert.Equal(1, transaction.RollbackCallCount);
-        Assert.True(transaction.DisposeCallCount > 0);
+        Assert.Null(dbConnectionFactory.CurrentDbTransaction);
+        Assert.Equal(1, dbTransaction.RollbackCallCount);
+        Assert.True(dbTransaction.DisposeCallCount > 0);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class DbConnectionFactoryTests
         await dbConnectionFactory.RollbackTransaction();
 
         // Assert
-        Assert.Null(dbConnectionFactory.CurrentTransaction);
+        Assert.Null(dbConnectionFactory.CurrentDbTransaction);
     }
 
     [Fact]
@@ -158,13 +158,13 @@ public class DbConnectionFactoryTests
         // Arrange
         var dbConnectionFactory = CreateDbConnectionFactory();
         await dbConnectionFactory.BeginTransaction();
-        var transaction = _testDbConnection.CurrentTestTransaction!;
+        var dbTransaction = _testDbConnection.CurrentTestTransaction!;
 
         // Act
         dbConnectionFactory.Dispose();
 
         // Assert
-        Assert.Equal(1, transaction.RollbackCallCount);
+        Assert.Equal(1, dbTransaction.RollbackCallCount);
         Assert.True(_testDbConnection.DisposeCallCount > 0);
     }
 
@@ -174,13 +174,13 @@ public class DbConnectionFactoryTests
         // Arrange
         var dbConnectionFactory = CreateDbConnectionFactory();
         await dbConnectionFactory.BeginTransaction();
-        var transaction = _testDbConnection.CurrentTestTransaction!;
+        var dbTransaction = _testDbConnection.CurrentTestTransaction!;
 
         // Act
         await dbConnectionFactory.DisposeAsync();
 
         // Assert
-        Assert.Equal(1, transaction.RollbackCallCount);
+        Assert.Equal(1, dbTransaction.RollbackCallCount);
         Assert.True(_testDbConnection.DisposeCallCount > 0);
     }
 
@@ -196,25 +196,25 @@ public class DbConnectionFactoryTests
         await Assert.ThrowsAsync<ObjectDisposedException>(() => dbConnectionFactory.BeginTransaction());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => dbConnectionFactory.CommitTransaction());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => dbConnectionFactory.RollbackTransaction());
-        Assert.Throws<ObjectDisposedException>(() => _ = dbConnectionFactory.CurrentTransaction);
+        Assert.Throws<ObjectDisposedException>(() => _ = dbConnectionFactory.CurrentDbTransaction);
     }
 
     private class TestableDbConnectionFactory : DbConnectionFactory
     {
-        private readonly DbConnection _connection;
+        private readonly DbConnection _dbConnection;
 
         public TestableDbConnectionFactory(
             IConfiguration configuration,
             IHostingEnvironment hostingEnvironment,
             ISecretsRepository secretsRepository,
             ILogger<DbConnectionFactory> logger,
-            DbConnection connection)
+            DbConnection dbConnection)
             : base(configuration, hostingEnvironment, secretsRepository, logger)
         {
-            _connection = connection;
+            _dbConnection = dbConnection;
         }
 
-        public override DbConnection GetDbConnection(string connectionString) => _connection;
+        public override DbConnection GetDbConnection(string connectionString) => _dbConnection;
     }
 
     private class TestDbConnection : DbConnection
@@ -267,19 +267,19 @@ public class DbConnectionFactoryTests
 
     private class TestDbTransaction : DbTransaction
     {
-        private readonly DbConnection _connection;
+        private readonly DbConnection _dbConnection;
 
         public int CommitCallCount { get; private set; }
         public int RollbackCallCount { get; private set; }
         public int DisposeCallCount { get; private set; }
 
-        public TestDbTransaction(DbConnection connection)
+        public TestDbTransaction(DbConnection dbConnection)
         {
-            _connection = connection;
+            _dbConnection = dbConnection;
         }
 
         public override IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
-        protected override DbConnection DbConnection => _connection;
+        protected override DbConnection DbConnection => _dbConnection;
 
         public override void Commit() => CommitCallCount++;
 

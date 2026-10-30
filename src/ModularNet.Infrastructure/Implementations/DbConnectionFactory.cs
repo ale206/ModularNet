@@ -15,8 +15,8 @@ public class DbConnectionFactory : IDbConnectionFactory
     private readonly IHostingEnvironment _hostingEnvironment;
     private readonly ILogger<DbConnectionFactory> _logger;
     private readonly ISecretsRepository _secretsRepository;
-    private DbConnection? _connection;
-    private DbTransaction? _transaction;
+    private DbConnection? _dbConnection;
+    private DbTransaction? _dbTransaction;
     private bool _disposed;
 
     public DbConnectionFactory(IConfiguration configuration, IHostingEnvironment hostingEnvironment,
@@ -30,12 +30,12 @@ public class DbConnectionFactory : IDbConnectionFactory
         _logger.LogDebug($"{nameof(DbConnectionFactory)} constructed");
     }
 
-    public DbTransaction? CurrentTransaction
+    public DbTransaction? CurrentDbTransaction
     {
         get
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return _transaction;
+            return _dbTransaction;
         }
     }
 
@@ -69,18 +69,18 @@ public class DbConnectionFactory : IDbConnectionFactory
         ObjectDisposedException.ThrowIf(_disposed, this);
         _logger.LogDebug($"Start repository method {nameof(GetConnection)}");
 
-        if (_connection == null)
+        if (_dbConnection == null)
         {
             var connectionString = await GetDbConnectionString();
-            _connection = GetDbConnection(connectionString);
+            _dbConnection = GetDbConnection(connectionString);
         }
 
-        if (_connection.State != ConnectionState.Open)
+        if (_dbConnection.State != ConnectionState.Open)
         {
-            await _connection.OpenAsync();
+            await _dbConnection.OpenAsync();
         }
 
-        return _connection;
+        return _dbConnection;
     }
 
     public async Task BeginTransaction()
@@ -88,13 +88,13 @@ public class DbConnectionFactory : IDbConnectionFactory
         ObjectDisposedException.ThrowIf(_disposed, this);
         _logger.LogDebug($"Start repository method {nameof(BeginTransaction)}");
 
-        if (_transaction != null)
+        if (_dbTransaction != null)
         {
             throw new InvalidOperationException("A transaction is already in progress.");
         }
 
-        var connection = await GetConnection();
-        _transaction = await connection.BeginTransactionAsync();
+        var dbConnection = await GetConnection();
+        _dbTransaction = await dbConnection.BeginTransactionAsync();
     }
 
     public async Task CommitTransaction()
@@ -102,19 +102,19 @@ public class DbConnectionFactory : IDbConnectionFactory
         ObjectDisposedException.ThrowIf(_disposed, this);
         _logger.LogDebug($"Start repository method {nameof(CommitTransaction)}");
 
-        if (_transaction == null)
+        if (_dbTransaction == null)
         {
             throw new InvalidOperationException("No transaction in progress to commit.");
         }
 
         try
         {
-            await _transaction.CommitAsync();
+            await _dbTransaction.CommitAsync();
         }
         finally
         {
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            await _dbTransaction.DisposeAsync();
+            _dbTransaction = null;
         }
     }
 
@@ -123,19 +123,19 @@ public class DbConnectionFactory : IDbConnectionFactory
         ObjectDisposedException.ThrowIf(_disposed, this);
         _logger.LogDebug($"Start repository method {nameof(RollbackTransaction)}");
 
-        if (_transaction == null)
+        if (_dbTransaction == null)
         {
             return;
         }
 
         try
         {
-            await _transaction.RollbackAsync();
+            await _dbTransaction.RollbackAsync();
         }
         finally
         {
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            await _dbTransaction.DisposeAsync();
+            _dbTransaction = null;
         }
     }
 
@@ -158,24 +158,24 @@ public class DbConnectionFactory : IDbConnectionFactory
 
         if (disposing)
         {
-            if (_transaction != null)
+            if (_dbTransaction != null)
             {
                 try
                 {
-                    _transaction.Rollback();
+                    _dbTransaction.Rollback();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Exception while rolling back transaction during Dispose");
                 }
-                _transaction.Dispose();
-                _transaction = null;
+                _dbTransaction.Dispose();
+                _dbTransaction = null;
             }
 
-            if (_connection != null)
+            if (_dbConnection != null)
             {
-                _connection.Dispose();
-                _connection = null;
+                _dbConnection.Dispose();
+                _dbConnection = null;
             }
         }
 
@@ -186,24 +186,24 @@ public class DbConnectionFactory : IDbConnectionFactory
     {
         if (_disposed) return;
 
-        if (_transaction != null)
+        if (_dbTransaction != null)
         {
             try
             {
-                await _transaction.RollbackAsync();
+                await _dbTransaction.RollbackAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Exception while rolling back transaction during DisposeAsync");
             }
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            await _dbTransaction.DisposeAsync();
+            _dbTransaction = null;
         }
 
-        if (_connection != null)
+        if (_dbConnection != null)
         {
-            await _connection.DisposeAsync();
-            _connection = null;
+            await _dbConnection.DisposeAsync();
+            _dbConnection = null;
         }
 
         _disposed = true;

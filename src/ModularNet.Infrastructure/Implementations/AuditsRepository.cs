@@ -27,13 +27,13 @@ public class AuditsRepository : IAuditsRepository
                 (`audit_timestamp`, `user_id`, `audit_type`, `meta`)
                 VALUES 
                 (@audit_timestamp, @user_id, @audit_type, @meta)";
-        var connection = await _dbConnectionFactory.GetConnection();
-        await connection.ExecuteAsync(sql, new
+        var dbConnection = await _dbConnectionFactory.GetConnection();
+        await dbConnection.ExecuteAsync(sql, new
         {
             audit_timestamp = DateTime.UtcNow,
             user_id = modularNetAudit.UserId,
             audit_type = modularNetAudit.AuditType,
             meta = modularNetAudit.Meta
-        }, transaction: _dbConnectionFactory.CurrentTransaction);
+        }, transaction: _dbConnectionFactory.CurrentDbTransaction);
     }
 }

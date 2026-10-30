@@ -22,7 +22,7 @@ public class UsersSettingsRepository : IUsersSettingsRepository
     {
         _logger.LogDebug($"Start repository method {nameof(GetUserSettings)}");
 
-        var connection = await _dbConnectionFactory.GetConnection();
+        var dbConnection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"SELECT `id`, `user_id`, `setting_name`, `setting_value`, `is_enabled`, `meta`,
@@ -30,17 +30,17 @@ public class UsersSettingsRepository : IUsersSettingsRepository
             FROM `user_setting` 
             WHERE user_id = @user_id AND is_enabled = 1 AND deleted_on IS NULL";
 
-        return await connection.QueryAsync<UserSettingDto>(sql, new
+        return await dbConnection.QueryAsync<UserSettingDto>(sql, new
         {
             user_id = userId
-        }, transaction: _dbConnectionFactory.CurrentTransaction);
+        }, transaction: _dbConnectionFactory.CurrentDbTransaction);
     }
 
     public async Task CreateUserSetting(UserSetting userSetting)
     {
         _logger.LogDebug($"Start repository method {nameof(CreateUserSetting)}");
 
-        var connection = await _dbConnectionFactory.GetConnection();
+        var dbConnection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"INSERT INTO `user_setting` 
@@ -49,7 +49,7 @@ public class UsersSettingsRepository : IUsersSettingsRepository
                 (@id, @user_id, @setting_name, @setting_value, @is_enabled, @meta, @created_on)
                 ";
 
-        await connection.ExecuteAsync(sql, new
+        await dbConnection.ExecuteAsync(sql, new
         {
             id = userSetting.Id,
             user_id = userSetting.UserId,
@@ -58,14 +58,14 @@ public class UsersSettingsRepository : IUsersSettingsRepository
             is_enabled = true,
             meta = userSetting.Meta,
             created_on = DateTime.UtcNow
-        }, transaction: _dbConnectionFactory.CurrentTransaction);
+        }, transaction: _dbConnectionFactory.CurrentDbTransaction);
     }
 
     public async Task UpdateUserSetting(UserSetting userSetting)
     {
         _logger.LogDebug($"Start repository method {nameof(UpdateUserSetting)}");
 
-        var connection = await _dbConnectionFactory.GetConnection();
+        var dbConnection = await _dbConnectionFactory.GetConnection();
 
         const string sql =
             @"UPDATE `user_setting` 
@@ -73,13 +73,13 @@ public class UsersSettingsRepository : IUsersSettingsRepository
                 WHERE setting_name = @setting_name 
              ";
 
-        await connection.ExecuteAsync(sql, new
+        await dbConnection.ExecuteAsync(sql, new
         {
             setting_name = userSetting.SettingName,
             setting_value = userSetting.SettingValue,
             is_enabled = userSetting.IsEnabled,
             meta = userSetting.Meta,
             modified_on = DateTime.UtcNow
-        }, transaction: _dbConnectionFactory.CurrentTransaction);
+        }, transaction: _dbConnectionFactory.CurrentDbTransaction);
     }
 }

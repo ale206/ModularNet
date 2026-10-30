@@ -7,7 +7,7 @@ public interface IDbConnectionFactory : IDisposable, IAsyncDisposable
     DbConnection GetDbConnection(string connectionString);
     Task<string> GetDbConnectionString();
     Task<DbConnection> GetConnection();
-    DbTransaction? CurrentTransaction { get; }
+    DbTransaction? CurrentDbTransaction { get; }
     Task BeginTransaction();
     Task CommitTransaction();
     Task RollbackTransaction();
