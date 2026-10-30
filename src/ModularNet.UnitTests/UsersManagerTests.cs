@@ -17,16 +17,28 @@ public class UsersManagerTests
     private readonly Mock<IEmailServiceManager> _emailServiceManagerMock = new();
     private readonly Mock<IEncryptManager> _encryptManagerMock = new();
     private readonly Mock<ILogger<UsersManager>> _loggerMock = new();
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IUsersRepository> _usersRepositoryMock = new();
+
+    private UsersManager CreateUsersManager()
+    {
+        return new UsersManager(
+            _usersRepositoryMock.Object,
+            _loggerMock.Object,
+            _encryptManagerMock.Object,
+            _emailServiceManagerMock.Object,
+            _auditsManagerMock.Object,
+            _authenticationServiceMock.Object,
+            _appSettingsManagerMock.Object,
+            _unitOfWorkMock.Object);
+    }
 
     [Fact]
     public async Task RegisterUserTest()
     {
         // Arrange
         _encryptManagerMock.Setup(x => x.GenerateInitializationVector()).ReturnsAsync("initialization-vector");
-        var usersManager = new UsersManager(_usersRepositoryMock.Object, _loggerMock.Object, _encryptManagerMock.Object,
-            _emailServiceManagerMock.Object, _auditsManagerMock.Object, _authenticationServiceMock.Object,
-            _appSettingsManagerMock.Object);
+        var usersManager = CreateUsersManager();
         _usersRepositoryMock.Setup(x => x.RegisterUser(It.IsAny<User>())).Returns(Task.CompletedTask);
 
         // Act
@@ -40,10 +52,7 @@ public class UsersManagerTests
     public async Task LoginTests()
     {
         // Arrange
-        _encryptManagerMock.Setup(x => x.GenerateInitializationVector()).ReturnsAsync("initialization-vector");
-        var usersManager = new UsersManager(_usersRepositoryMock.Object, _loggerMock.Object, _encryptManagerMock.Object,
-            _emailServiceManagerMock.Object, _auditsManagerMock.Object, _authenticationServiceMock.Object,
-            _appSettingsManagerMock.Object);
+        var usersManager = CreateUsersManager();
         _usersRepositoryMock.Setup(x => x.UpdateUserLoginDate(It.IsAny<Guid>(), It.IsAny<DateTime>()))
             .Returns(Task.CompletedTask);
 
@@ -51,17 +60,33 @@ public class UsersManagerTests
         await usersManager.LoginUser(new UserSignInRequest());
 
         // Assert
+        _unitOfWorkMock.Verify(x => x.BeginTransaction(), Times.Once);
+        _auditsManagerMock.Verify(x => x.WriteAuditToDb(It.IsAny<ModularNetAudit>()), Times.Once);
         _usersRepositoryMock.Verify(x => x.UpdateUserLoginDate(It.IsAny<Guid>(), It.IsAny<DateTime>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.Commit(), Times.Once);
+        _unitOfWorkMock.Verify(x => x.Rollback(), Times.Never);
+    }
+
+    [Fact]
+    public async Task LoginUserRollsBackTransactionWhenExceptionThrown()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        _usersRepositoryMock.Setup(x => x.UpdateUserLoginDate(It.IsAny<Guid>(), It.IsAny<DateTime>()))
+            .ThrowsAsync(new InvalidOperationException("Database connection failure"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => usersManager.LoginUser(new UserSignInRequest()));
+        _unitOfWorkMock.Verify(x => x.BeginTransaction(), Times.Once);
+        _unitOfWorkMock.Verify(x => x.Rollback(), Times.Once);
+        _unitOfWorkMock.Verify(x => x.Commit(), Times.Never);
     }
 
     [Fact]
     public async Task GetUserByEmailTest()
     {
         // Arrange
-        _encryptManagerMock.Setup(x => x.GenerateInitializationVector()).ReturnsAsync("initialization-vector");
-        var usersManager = new UsersManager(_usersRepositoryMock.Object, _loggerMock.Object, _encryptManagerMock.Object,
-            _emailServiceManagerMock.Object, _auditsManagerMock.Object, _authenticationServiceMock.Object,
-            _appSettingsManagerMock.Object);
+        var usersManager = CreateUsersManager();
         var mockedUser = UsersHelper.GetUser();
         _usersRepositoryMock.Setup(x => x.GetUserByEmail(It.IsAny<string>())).ReturnsAsync(mockedUser);
 
@@ -77,10 +102,7 @@ public class UsersManagerTests
     public async Task GetUserByIdTest()
     {
         // Arrange
-        _encryptManagerMock.Setup(x => x.GenerateInitializationVector()).ReturnsAsync("initialization-vector");
-        var usersManager = new UsersManager(_usersRepositoryMock.Object, _loggerMock.Object, _encryptManagerMock.Object,
-            _emailServiceManagerMock.Object, _auditsManagerMock.Object, _authenticationServiceMock.Object,
-            _appSettingsManagerMock.Object);
+        var usersManager = CreateUsersManager();
         var mockedUser = UsersHelper.GetUser();
         _usersRepositoryMock.Setup(x => x.GetUserById(It.IsAny<Guid>())).ReturnsAsync(mockedUser);
 

@@ -10,7 +10,7 @@ There are five layers: **Api**, **Business**, **Domain**, **Infrastructure** and
 | Layer | Responsibility | May depend on |
 |---|---|---|
 | Api | Controllers, filters, middlewares, API helpers. Only logic that is specific to this layer. | Business (through injected `*Manager` interfaces), Domain |
-| Business | All business logic, covered by unit tests. | Other Business classes (through their `*Manager` interfaces), Infrastructure (only through its own `*Repository`), Domain, Shared |
+| Business | All business logic, covered by unit tests. | Other Business classes (through their `*Manager` interfaces), Infrastructure (through its related `*Repository` and `IUnitOfWork`), Domain, Shared |
 | Domain | DTOs, requests/responses, application entities, enums, custom exceptions, constants. No logic. | Shared |
 | Infrastructure | Connectors to external services (database, cache, other APIs, cloud services, etc.). No business logic. | Domain, Shared |
 | Shared | Stateless helper methods and common utilities (e.g. `DateHelper`, `EnumHelper`). No business logic. | Nothing (base .NET libraries only) |
@@ -19,15 +19,15 @@ Rules:
 
 - Api classes can only talk to Business, by injecting `*Manager` interfaces. They must never use Infrastructure directly.
 - A Business class can talk to other Business classes only through their `*Manager` interfaces.
-- A Business class has exactly one entry point to Infrastructure: its related `*Repository` class.
-- `*Repository` classes are the only access point to external services.
-- Each layer owns its own interfaces and implementations. An interface and its implementation always live in the same layer: `IXxxManager` and `XxxManager` in Business, `IXxxRepository` and `XxxRepository` in Infrastructure. Other layers consume the interface but never define it.
+- A Business class accesses Infrastructure through its related `*Repository` class. When coordinating atomic transactions across multiple repositories without distributed transaction (MSDTC) escalation, Business classes inject `IUnitOfWork`.
+- `*Repository` classes are the only access point to external services, and share the scoped connection and active transaction provided by `IDbConnectionFactory`.
+- Each layer owns its own interfaces and implementations. An interface and its implementation always live in the same layer: `IXxxManager` and `XxxManager` in Business, `IXxxRepository` and `XxxRepository` in Infrastructure (as well as `IUnitOfWork` and `UnitOfWork`). Other layers consume the interface but never define it.
 
 ### 1.2 Naming
 
 - Business classes are named `XxxManager`, with interface `IXxxManager` (e.g. `UsersManager`, `IUsersManager`).
-- Infrastructure classes that connect to an external service are named `XxxRepository`, with interface `IXxxRepository` (e.g. `UsersRepository`, `IUsersRepository`).
-- Test data helpers are static classes named `XxxHelper` in `ModularNet.UnitTests/Helpers`, with `GetXxx()` methods (e.g. `UsersHelper.GetUser()`, `AppSettingsHelper.GetAppSettings()`).
+- Infrastructure classes that connect to an external service are named `XxxRepository`, with interface `IXxxRepository` (e.g. `UsersRepository`, `IUsersRepository`). Transaction coordination is handled by `UnitOfWork` (`IUnitOfWork`).
+- Test data helpers are static classes named `XxxHelper` in `ModularNet.UnitTests/Helpers`, with `GetXxx()` methods (e.g. `UsersHelper.GetUser()`, `AppSettingsHelper.GetAppSettings()`, `UserSettingsHelper.GetUserSetting()`).
 - Do not add the `Async` suffix to method names (see 2.3).
 
 ### 1.3 Differences from Onion Architecture

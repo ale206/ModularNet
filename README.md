@@ -13,6 +13,7 @@ This repository also serves as a ready-to-use template featuring:
 - Secrets management via **Azure Key Vault**
 - In-memory and **Redis** caching
 - Structured logging and auditing with **Serilog** and **MySQL**
+- Unit of Work pattern coordinating atomic **Dapper** transactions across repositories
 
 ## Architecture & Coding Standards
 
@@ -23,7 +24,7 @@ All architectural rules, layer responsibilities, differences from Onion Architec
 - **Framework:** .NET 10 (ASP.NET Core Web API)
 - **Authentication:** Firebase Admin SDK & JWT Bearer Authentication
 - **Authorization:** `Microsoft.Identity.Web` (`[Authorize]` and `[RequiredScope]`)
-- **Database:** MySQL (`MySqlConnector` & `Dapper`, schema in [`database/database_schema.sql`](database/database_schema.sql))
+- **Database:** MySQL (`MySqlConnector`, `Dapper`, Unit of Work pattern, schema in [`database/database_schema.sql`](database/database_schema.sql))
 - **Caching:** In-Memory cache & Azure Cache for Redis (`StackExchange.Redis`)
 - **Emailing:** Azure Communication Services Email (`Azure.Communication.Email`)
 - **Secrets Management:** Azure Key Vault (`Azure.Security.KeyVault.Secrets` & `Azure.Identity`)

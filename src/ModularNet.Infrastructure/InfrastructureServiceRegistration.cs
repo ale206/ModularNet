@@ -21,6 +21,7 @@ public static class InfrastructureServiceRegistration
         services.AddSingleton<ISecretsRepository, SecretsRepository>();
         services.AddScoped<IUsersRepository, UsersRepository>();
         services.AddScoped<IUsersSettingsRepository, UsersSettingsRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
         services.AddScoped<IRedisRepository, RedisRepository>();
 
