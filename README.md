@@ -1,5 +1,7 @@
 # ModularNet
 
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/ale206/badge.svg)](https://hub.xerj.org/contributors/ale206)
+
 ![ModularNet Architecture](assets/modularnet-architecture.png)
 
 ## Introduction
