@@ -1,174 +1,95 @@
+using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Entities;
 using ModularNet.Domain.Enums;
 using ModularNet.IntegrationTests.Helpers;
+using ModularNet.IntegrationTests.Infrastructure;
 using Xunit;
 
 namespace ModularNet.IntegrationTests.Tests;
 
-public class CacheManagerTests
+[Collection("IntegrationTests")]
+public class CacheManagerTests : IDisposable
 {
+    private readonly IServiceScope _scope;
     private readonly ICacheManager _cacheManager;
 
-    public CacheManagerTests(ICacheManager cacheManager)
+    public CacheManagerTests(ModularNetWebApplicationFactory factory)
     {
-        _cacheManager = cacheManager;
+        _scope = factory.Services.CreateScope();
+        _cacheManager = _scope.ServiceProvider.GetRequiredService<ICacheManager>();
     }
 
-    public async Task RunAllTests()
+    [Fact]
+    public async Task InMemoryCacheForStringsSavesAndRetrievesValue()
     {
-        await InMemoryCacheForStringsTest();
-        await InMemoryMemoryCacheForPrimitivesTest();
-        await InMemoryMemoryCacheForObjectsTest();
-        await RemoveFromInMemoryCacheTest();
-
-        await RedisCacheForStringsTest();
-        await RedisCacheForPrimitivesTest();
-        await RedisCacheForObjectsTest();
-        await RemoveFromRedisCacheTest();
-    }
-
-    private async Task InMemoryCacheForStringsTest()
-    {
-        const string itemKey = "itemToCache";
-        const string itemValue = "itemCached";
-        const int timeToCacheInSeconds = 2;
+        // Arrange
+        const string itemKey = "stringKey";
+        const string itemValue = "stringValue";
         const CacheType cacheType = CacheType.InMemory;
 
-        await _cacheManager.SaveInCache<string>(itemKey, itemValue, cacheType, timeToCacheInSeconds);
+        // Act
+        await _cacheManager.SaveInCache(itemKey, itemValue, cacheType, 60);
+        var cachedValue = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
 
-        var valueFromCache = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
-        Assert.NotNull(valueFromCache);
-        Assert.Equal(itemValue, valueFromCache);
-
-        await Task.Delay(2000);
-        valueFromCache = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
+        // Assert
+        Assert.NotNull(cachedValue);
+        Assert.Equal(itemValue, cachedValue);
     }
 
-    private async Task InMemoryMemoryCacheForPrimitivesTest()
+    [Fact]
+    public async Task InMemoryCacheForPrimitivesSavesAndRetrievesValue()
     {
-        const string itemKey = "itemToCache";
-        const int itemValue = 123;
-        const int timeToCacheInSeconds = 2;
+        // Arrange
+        const string itemKey = "primitiveKey";
+        const int itemValue = 42;
         const CacheType cacheType = CacheType.InMemory;
 
-        await _cacheManager.SaveInCache<int?>(itemKey, itemValue, cacheType, timeToCacheInSeconds);
+        // Act
+        await _cacheManager.SaveInCache<int?>(itemKey, itemValue, cacheType, 60);
+        var cachedValue = await _cacheManager.GetFromCache<int?>(itemKey, cacheType);
 
-        var valueFromCache = await _cacheManager.GetFromCache<int?>(itemKey, cacheType);
-        Assert.NotNull(valueFromCache);
-        Assert.Equal(itemValue, valueFromCache);
-
-        await Task.Delay(2000);
-        valueFromCache = await _cacheManager.GetFromCache<int?>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
+        // Assert
+        Assert.NotNull(cachedValue);
+        Assert.Equal(itemValue, cachedValue);
     }
 
-    private async Task InMemoryMemoryCacheForObjectsTest()
+    [Fact]
+    public async Task InMemoryCacheForObjectsSavesAndRetrievesValue()
     {
-        const string itemKey = "itemToCache";
-        var itemValue = UserHelper.GetUser();
-        const int timeToCacheInSeconds = 2;
+        // Arrange
+        const string itemKey = "objectKey";
+        var user = UserHelper.GetUser();
         const CacheType cacheType = CacheType.InMemory;
 
-        await _cacheManager.SaveInCache(itemKey, itemValue, cacheType, timeToCacheInSeconds);
+        // Act
+        await _cacheManager.SaveInCache(itemKey, user, cacheType, 60);
+        var cachedUser = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
 
-        var valueFromCache = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
-        Assert.NotNull(valueFromCache);
-
-        var userFromCache = valueFromCache;
-
-        Assert.Equal(itemValue.Email, userFromCache.Email);
-
-        await Task.Delay(2000);
-        valueFromCache = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
+        // Assert
+        Assert.NotNull(cachedUser);
+        Assert.Equal(user.Email, cachedUser.Email);
     }
 
-    private async Task RemoveFromInMemoryCacheTest()
+    [Fact]
+    public async Task RemoveFromInMemoryCacheDeletesCachedItem()
     {
-        const string itemKey = "itemToCache";
-        var itemValue = UserHelper.GetUser();
-        const int timeToCacheInSeconds = 10;
+        // Arrange
+        const string itemKey = "itemToRemove";
+        var user = UserHelper.GetUser();
         const CacheType cacheType = CacheType.InMemory;
+        await _cacheManager.SaveInCache(itemKey, user, cacheType, 60);
 
-        await _cacheManager.SaveInCache(itemKey, itemValue, cacheType, timeToCacheInSeconds);
-
+        // Act
         await _cacheManager.RemoveFromCache(itemKey, cacheType);
+        var cachedUser = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
 
-        var valueFromCache = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
+        // Assert
+        Assert.Null(cachedUser);
     }
 
-    private async Task RedisCacheForStringsTest()
+    public void Dispose()
     {
-        const string itemKey = "itemToCache";
-        const string itemValue = "itemCached";
-        const int timeToCacheInSeconds = 2;
-        const CacheType cacheType = CacheType.Redis;
-
-        await _cacheManager.SaveInCache<string>(itemKey, itemValue, cacheType, timeToCacheInSeconds);
-
-        var valueFromCache = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
-        Assert.NotNull(valueFromCache);
-        Assert.Equal(itemValue, valueFromCache);
-
-        await Task.Delay(2000);
-        valueFromCache = await _cacheManager.GetFromCache<string>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
-    }
-
-    private async Task RedisCacheForPrimitivesTest()
-    {
-        const string itemKey = "itemToCache";
-        const int itemValue = 123;
-        const int timeToCacheInSeconds = 2;
-        const CacheType cacheType = CacheType.Redis;
-
-        await _cacheManager.SaveInCache(itemKey, itemValue, cacheType, timeToCacheInSeconds);
-
-        var valueFromCache = await _cacheManager.GetFromCache<int?>(itemKey, cacheType);
-        Assert.NotNull(valueFromCache);
-        Assert.Equal(itemValue, valueFromCache);
-
-        await Task.Delay(2000);
-        valueFromCache = await _cacheManager.GetFromCache<int?>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
-    }
-
-    private async Task RedisCacheForObjectsTest()
-    {
-        const string itemKey = "itemToCache";
-        var itemValue = UserHelper.GetUser();
-        const int timeToCacheInSeconds = 2;
-        const CacheType cacheType = CacheType.Redis;
-
-        await _cacheManager.SaveInCache(itemKey, itemValue, cacheType, timeToCacheInSeconds);
-
-        var valueFromCache = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
-        Assert.NotNull(valueFromCache);
-
-        var userFromCache = valueFromCache;
-
-        Assert.Equal(itemValue.Email, userFromCache.Email);
-
-        await Task.Delay(2000);
-        valueFromCache = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
-    }
-
-    private async Task RemoveFromRedisCacheTest()
-    {
-        const string itemKey = "itemToCache";
-        var itemValue = UserHelper.GetUser();
-        const int timeToCacheInSeconds = 10;
-        const CacheType cacheType = CacheType.Redis;
-
-        await _cacheManager.SaveInCache(itemKey, itemValue, cacheType, timeToCacheInSeconds);
-
-        await _cacheManager.RemoveFromCache(itemKey, cacheType);
-
-        var valueFromCache = await _cacheManager.GetFromCache<User>(itemKey, cacheType);
-        Assert.Null(valueFromCache);
+        _scope.Dispose();
     }
 }

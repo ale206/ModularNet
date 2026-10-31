@@ -1,34 +1,48 @@
+using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Business.Interfaces;
+using ModularNet.IntegrationTests.Infrastructure;
 using Xunit;
 
 namespace ModularNet.IntegrationTests.Tests;
 
-public class EncryptManagerTests
+[Collection("IntegrationTests")]
+public class EncryptManagerTests : IDisposable
 {
+    private readonly IServiceScope _scope;
     private readonly IEncryptManager _encryptManager;
 
-    public EncryptManagerTests(IEncryptManager encryptManager)
+    public EncryptManagerTests(ModularNetWebApplicationFactory factory)
     {
-        _encryptManager = encryptManager;
+        _scope = factory.Services.CreateScope();
+        _encryptManager = _scope.ServiceProvider.GetRequiredService<IEncryptManager>();
     }
 
-    public async Task RunAllTests()
+    [Fact]
+    public async Task GenerateInitializationVectorReturnsValidBase64()
     {
-        await GenerateInitializationVector();
-        await GenerateEmailVerificationCode();
-    }
-
-    private async Task GenerateInitializationVector()
-    {
+        // Arrange & Act
         var initializationVector = await _encryptManager.GenerateInitializationVector();
 
+        // Assert
         Assert.NotNull(initializationVector);
+        Assert.NotEmpty(initializationVector);
+        var bytes = Convert.FromBase64String(initializationVector);
+        Assert.Equal(16, bytes.Length);
     }
 
-    private async Task GenerateEmailVerificationCode()
+    [Fact]
+    public async Task GenerateEmailVerificationCodeReturnsValidCode()
     {
-        var emailVerificationCode = await _encryptManager.GenerateEmailVerificationCode("email@email.com");
+        // Arrange & Act
+        var emailVerificationCode = await _encryptManager.GenerateEmailVerificationCode("email@example.com");
 
+        // Assert
         Assert.NotNull(emailVerificationCode);
+        Assert.NotEmpty(emailVerificationCode);
+    }
+
+    public void Dispose()
+    {
+        _scope.Dispose();
     }
 }
