@@ -1,42 +1,31 @@
-using Azure.Communication.Email;
+using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Business.Interfaces;
-using ModularNet.Domain.Entities;
+using ModularNet.IntegrationTests.Infrastructure;
 using Xunit;
 
 namespace ModularNet.IntegrationTests.Tests;
 
-public class EmailServiceTests
+[Collection("IntegrationTests")]
+public class EmailServiceTests : IDisposable
 {
+    private readonly IServiceScope _scope;
     private readonly IEmailServiceManager _emailServiceManager;
 
-    public EmailServiceTests(IEmailServiceManager emailServiceManager)
+    public EmailServiceTests(ModularNetWebApplicationFactory factory)
     {
-        _emailServiceManager = emailServiceManager;
+        _scope = factory.Services.CreateScope();
+        _emailServiceManager = _scope.ServiceProvider.GetRequiredService<IEmailServiceManager>();
     }
 
-    public async Task RunAllTests()
+    [Fact]
+    public void EmailServiceManagerResolvesFromHostContainer()
     {
-        await SendEmail();
+        // Assert
+        Assert.NotNull(_emailServiceManager);
     }
 
-    private async Task SendEmail()
+    public void Dispose()
     {
-        var emailRecipients = new EmailRecipients(
-            new List<EmailAddress>
-            {
-                new("yourEmail@gmail.com")
-            });
-
-        var newModularNetEmail = new NewModularNetEmail
-        {
-            //Html = "",
-            Subject = "Test Email",
-            PlainText = "Testing Email",
-            EmailRecipients = emailRecipients
-        };
-
-        var messageId = await _emailServiceManager.SendEmail(newModularNetEmail);
-
-        Assert.NotNull(messageId);
+        _scope.Dispose();
     }
 }
