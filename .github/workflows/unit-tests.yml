@@ -1,0 +1,67 @@
+name: Unit Tests & Code Coverage
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/ModularNet.sln
+
+      - name: Run Unit Tests with Coverage
+        run: |
+          dotnet test src/ModularNet.UnitTests/ModularNet.UnitTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --verbosity normal \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=cobertura \
+            /p:CoverletOutput=TestResults/coverage.cobertura.xml
+
+      - name: Generate Code Coverage Badge
+        run: |
+          python3 .github/scripts/generate-coverage-badge.py \
+            src/ModularNet.UnitTests/TestResults/coverage.cobertura.xml \
+            .github/badges
+
+      - name: Publish Coverage Badge to badges branch
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin badges:badges || git branch badges origin/badges || true
+          git worktree add /tmp/badges badges
+
+          cp .github/badges/coverage.svg /tmp/badges/
+          cp .github/badges/coverage.json /tmp/badges/
+
+          cd /tmp/badges
+          git add coverage.svg coverage.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update code coverage badge to ${{ env.COVERAGE_PCT }}% [skip ci]"
+            git push origin badges
+          else
+            echo "No change in coverage badge."
+          fi

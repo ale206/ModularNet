@@ -1,5 +1,7 @@
 # ModularNet
 
+[![Unit Tests](https://github.com/ale206/ModularNet/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/ale206/ModularNet/actions/workflows/unit-tests.yml)
+[![Code Coverage](https://raw.githubusercontent.com/ale206/ModularNet/badges/coverage.svg)](https://github.com/ale206/ModularNet/actions/workflows/unit-tests.yml)
 [![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/ale206/badge.svg)](https://hub.xerj.org/contributors/ale206)
 
 ![ModularNet Architecture](assets/modularnet-architecture.png)
