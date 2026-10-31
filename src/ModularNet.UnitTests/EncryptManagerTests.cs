@@ -101,4 +101,122 @@ public class EncryptManagerTests
 
         Assert.Equal(verificationCode, verificationCodeDecrypted);
     }
+
+    [Fact]
+    public async Task VerifyHashedTextReturnsFalseWhenPasswordIsIncorrect()
+    {
+        // Arrange
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        var encryptManager = new EncryptManager(_appSettingsManagerMock.Object);
+        var hashedText = await encryptManager.HashText("CorrectPassword");
+
+        // Act
+        var isValid = await encryptManager.VerifyHashedText("WrongPassword", hashedText);
+
+        // Assert
+        Assert.False(isValid);
+    }
+
+    [Fact]
+    public async Task DecryptThrowsEncryptionExceptionWhenCiphertextIsCorrupted()
+    {
+        // Arrange
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        var encryptManager = new EncryptManager(_appSettingsManagerMock.Object);
+        var corruptedBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        var iv = await encryptManager.GenerateInitializationVector();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ModularNet.Domain.CustomExceptions.EncryptionException>(() =>
+            encryptManager.Decrypt(corruptedBytes, "password", iv));
+    }
+
+    [Fact]
+    public async Task GenerateEmailVerificationCodeReturnsValidBase64Code()
+    {
+        // Arrange
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        appSettings.ModularNetConfig.EncryptionSalt = "salt123456789012";
+        appSettings.ModularNetConfig.InitializationVector = Convert.ToBase64String(new byte[16]);
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        var encryptManager = new EncryptManager(_appSettingsManagerMock.Object);
+        const string userEmail = "test@example.com";
+
+        // Act
+        var code = await encryptManager.GenerateEmailVerificationCode(userEmail);
+
+        // Assert
+        Assert.False(string.IsNullOrEmpty(code));
+        var bytes = Convert.FromBase64String(code);
+        Assert.NotEmpty(bytes);
+    }
+
+    [Fact]
+    public async Task IsAccessCodeValidReturnsTrueForRecentTimestamp()
+    {
+        // Arrange
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        var encryptManager = new EncryptManager(_appSettingsManagerMock.Object);
+        var timestampString = DateTime.UtcNow.ToString("o");
+        var encryptedAccessCode = EncryptOneAccessCodeForTest(timestampString);
+
+        // Act
+        var isValid = await encryptManager.IsAccessCodeValid(encryptedAccessCode);
+
+        // Assert
+        Assert.True(isValid);
+    }
+
+    [Fact]
+    public async Task IsAccessCodeValidReturnsFalseForOldTimestamp()
+    {
+        // Arrange
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        var encryptManager = new EncryptManager(_appSettingsManagerMock.Object);
+        var oldTimestampString = DateTime.UtcNow.AddMinutes(-10).ToString("o");
+        var encryptedAccessCode = EncryptOneAccessCodeForTest(oldTimestampString);
+
+        // Act
+        var isValid = await encryptManager.IsAccessCodeValid(encryptedAccessCode);
+
+        // Assert
+        Assert.False(isValid);
+    }
+
+    [Fact]
+    public async Task IsAccessCodeValidReturnsFalseWhenPlainTextIsNotDate()
+    {
+        // Arrange
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        var encryptManager = new EncryptManager(_appSettingsManagerMock.Object);
+        var notADate = "invalid-date-string";
+        var encryptedAccessCode = EncryptOneAccessCodeForTest(notADate);
+
+        // Act
+        var isValid = await encryptManager.IsAccessCodeValid(encryptedAccessCode);
+
+        // Assert
+        Assert.False(isValid);
+    }
+
+    private static string EncryptOneAccessCodeForTest(string plainText)
+    {
+        var keyString = "ModularNet.2024".PadRight(32, ' ');
+        var ivString = "ModularNet.IV.2024".Substring(0, 16);
+        using var aes = System.Security.Cryptography.Aes.Create();
+        aes.Key = System.Text.Encoding.UTF8.GetBytes(keyString);
+        aes.IV = System.Text.Encoding.UTF8.GetBytes(ivString);
+        aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+        using var ms = new MemoryStream();
+        using var cs = new System.Security.Cryptography.CryptoStream(ms, aes.CreateEncryptor(), System.Security.Cryptography.CryptoStreamMode.Write);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+        cs.Write(bytes, 0, bytes.Length);
+        cs.FlushFinalBlock();
+        return Convert.ToBase64String(ms.ToArray());
+    }
 }

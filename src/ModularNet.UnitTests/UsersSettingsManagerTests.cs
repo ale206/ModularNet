@@ -129,4 +129,38 @@ public class UsersSettingsManagerTests
         await Assert.ThrowsAsync<Exception>(() => usersSettingsManager.CreateOrUpdateUserSettings(request));
         _unitOfWorkMock.Verify(x => x.BeginTransaction(), Times.Never);
     }
+
+    [Fact]
+    public async Task CreateOrUpdateUserSettingsUpdatesExistingSettingWhenAlreadyPresent()
+    {
+        // Arrange
+        var usersSettingsManager = CreateUsersSettingsManager();
+        var request = UserSettingsHelper.GetCreateOrUpdateUserSettingsRequest();
+        var userId = request.UserSettings[0].UserId;
+        var existingDto = new UserSettingDto
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SettingName = request.UserSettings[0].SettingName,
+            SettingValue = "OldValue",
+            IsEnabled = false
+        };
+
+        _usersSettingsRepositoryMock
+            .Setup(x => x.GetUserSettings(userId))
+            .ReturnsAsync(new List<UserSettingDto> { existingDto });
+        _usersSettingsRepositoryMock
+            .Setup(x => x.UpdateUserSetting(It.IsAny<UserSetting>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await usersSettingsManager.CreateOrUpdateUserSettings(request);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(existingDto.Id, result[0].Id);
+        Assert.Equal(request.UserSettings[0].SettingValue, result[0].SettingValue);
+        _usersSettingsRepositoryMock.Verify(x => x.UpdateUserSetting(It.IsAny<UserSetting>()), Times.Once);
+        _usersSettingsRepositoryMock.Verify(x => x.CreateUserSetting(It.IsAny<UserSetting>()), Times.Never);
+    }
 }

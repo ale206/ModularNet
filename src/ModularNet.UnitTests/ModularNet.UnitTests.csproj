@@ -38,4 +38,8 @@
         <ProjectReference Include="..\ModularNet.Business\ModularNet.Business.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="..\ModularNet.Api\EmailTemplates\**" Link="EmailTemplates\%(RecursiveDir)%(FileName)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
 </Project>

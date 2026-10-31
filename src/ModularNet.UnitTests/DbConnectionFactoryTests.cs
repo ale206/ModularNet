@@ -199,6 +199,36 @@ public class DbConnectionFactoryTests
         Assert.Throws<ObjectDisposedException>(() => _ = dbConnectionFactory.CurrentDbTransaction);
     }
 
+    [Fact]
+    public void GetDbConnectionReturnsMySqlConnectionInstance()
+    {
+        // Arrange
+        var realFactory = new DbConnectionFactory(
+            _configurationMock.Object,
+            _hostingEnvironmentMock.Object,
+            _secretsRepositoryMock.Object,
+            _loggerMock.Object);
+
+        // Act
+        using var connection = realFactory.GetDbConnection("Server=localhost;Database=test;");
+
+        // Assert
+        Assert.NotNull(connection);
+    }
+
+    [Fact]
+    public async Task GetDbConnectionStringThrowsWhenSecretMissingInNonDev()
+    {
+        // Arrange
+        _hostingEnvironmentMock.SetupGet(x => x.EnvironmentName).Returns("Production");
+        _secretsRepositoryMock.Setup(x => x.GetSecret("connection-string")).ReturnsAsync((string?)null);
+        var dbConnectionFactory = CreateDbConnectionFactory();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => dbConnectionFactory.GetDbConnectionString());
+        Assert.Equal("Error Getting Db Connection String from Secrets", exception.Message);
+    }
+
     private class TestableDbConnectionFactory : DbConnectionFactory
     {
         private readonly DbConnection _dbConnection;

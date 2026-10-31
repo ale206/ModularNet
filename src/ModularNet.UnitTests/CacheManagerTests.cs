@@ -92,7 +92,7 @@ public class CacheManagerTests
 
         _inMemoryCacheRepositoryMock
             .Setup(x => x.GetFromInMemoryCache<string>(itemKey))
-            .ReturnsAsync((string)null);
+            .ReturnsAsync((string?)null);
 
         // Act
         var result = await _cacheManager.GetFromCache<string>(itemKey, CacheType.InMemory);
@@ -129,5 +129,54 @@ public class CacheManagerTests
         _redisRepositoryMock.Verify(
             x => x.RemoveFromRedisCache(itemKey),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task GetFromCache_Redis_ShouldCallRedisRepository()
+    {
+        // Arrange
+        const string itemKey = "redisKey";
+        const string expectedValue = "redisValue";
+        _redisRepositoryMock.Setup(x => x.GetFromRedisCache<string>(itemKey)).ReturnsAsync(expectedValue);
+
+        // Act
+        var result = await _cacheManager.GetFromCache<string>(itemKey, CacheType.Redis);
+
+        // Assert
+        Assert.Equal(expectedValue, result);
+        _redisRepositoryMock.Verify(x => x.GetFromRedisCache<string>(itemKey), Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveInCache_InvalidCacheType_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        const CacheType invalidType = (CacheType)999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _cacheManager.SaveInCache("key", "val", invalidType));
+    }
+
+    [Fact]
+    public async Task GetFromCache_InvalidCacheType_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        const CacheType invalidType = (CacheType)999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _cacheManager.GetFromCache<string>("key", invalidType));
+    }
+
+    [Fact]
+    public async Task RemoveFromCache_InvalidCacheType_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        const CacheType invalidType = (CacheType)999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _cacheManager.RemoveFromCache("key", invalidType));
     }
 }

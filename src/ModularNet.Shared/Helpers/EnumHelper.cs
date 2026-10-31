@@ -27,7 +27,7 @@ public static class EnumHelper
         return string.Empty;
     }
 
-    private static T? GetValueFromDescription<T>(string description) where T : Enum
+    public static T? GetValueFromDescription<T>(string description) where T : Enum
     {
         foreach (var field in typeof(T).GetFields())
             if (Attribute.GetCustomAttribute(field,

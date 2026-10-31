@@ -113,4 +113,169 @@ public class UsersManagerTests
         _usersRepositoryMock.Verify(x => x.GetUserById(It.IsAny<Guid>()), Times.Once);
         Assert.NotNull(user);
     }
+
+    [Fact]
+    public async Task SetUserEmailAsVerifiedCallsRepository()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        var userId = Guid.NewGuid();
+        _usersRepositoryMock.Setup(x => x.SetUserEmailAsVerified(userId)).Returns(Task.CompletedTask);
+
+        // Act
+        await usersManager.SetUserEmailAsVerified(userId);
+
+        // Assert
+        _usersRepositoryMock.Verify(x => x.SetUserEmailAsVerified(userId), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetTermsAndConditionsAsAcceptedCallsRepository()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        var userId = Guid.NewGuid();
+        _usersRepositoryMock.Setup(x => x.SetTermsAndConditionsAsAccepted(userId)).Returns(Task.CompletedTask);
+
+        // Act
+        await usersManager.SetTermsAndConditionsAsAccepted(userId);
+
+        // Assert
+        _usersRepositoryMock.Verify(x => x.SetTermsAndConditionsAsAccepted(userId), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeactivateAccountCallsRepository()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        var userId = Guid.NewGuid();
+        _usersRepositoryMock.Setup(x => x.DeactivateAccount(userId)).Returns(Task.CompletedTask);
+
+        // Act
+        await usersManager.DeactivateAccount(userId);
+
+        // Assert
+        _usersRepositoryMock.Verify(x => x.DeactivateAccount(userId), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnableUserCallsRepository()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        var userId = Guid.NewGuid();
+        _usersRepositoryMock.Setup(x => x.EnableUser(userId)).Returns(Task.CompletedTask);
+
+        // Act
+        await usersManager.EnableUser(userId);
+
+        // Assert
+        _usersRepositoryMock.Verify(x => x.EnableUser(userId), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateUserOidCallsRepository()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        var userId = Guid.NewGuid();
+        const string userOid = "firebase-oid-123";
+        _usersRepositoryMock.Setup(x => x.UpdateUserOid(userId, userOid)).Returns(Task.CompletedTask);
+
+        // Act
+        await usersManager.UpdateUserOid(userId, userOid);
+
+        // Assert
+        _usersRepositoryMock.Verify(x => x.UpdateUserOid(userId, userOid), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserIdByEmailCallsRepositoryAndReturnsGuid()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        var expectedUserId = Guid.NewGuid();
+        const string email = "test@example.com";
+        _usersRepositoryMock.Setup(x => x.GetUserIdByEmail(email)).ReturnsAsync(expectedUserId);
+
+        // Act
+        var userId = await usersManager.GetUserIdByEmail(email);
+
+        // Assert
+        Assert.Equal(expectedUserId, userId);
+        _usersRepositoryMock.Verify(x => x.GetUserIdByEmail(email), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterUserInFirebaseReturnsUidWhenSuccessful()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        const string email = "user@example.com";
+        const string password = "Password123!";
+        const string expectedUid = "firebase-uid-abc";
+        _authenticationServiceMock.Setup(x => x.RegisterAsync(email, password)).ReturnsAsync(expectedUid);
+
+        // Act
+        var uid = await usersManager.RegisterUserInFirebase(email, password);
+
+        // Assert
+        Assert.Equal(expectedUid, uid);
+        _authenticationServiceMock.Verify(x => x.RegisterAsync(email, password), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterUserInFirebaseLogsAndThrowsWhenExceptionOccurs()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        const string email = "user@example.com";
+        const string password = "Password123!";
+        _authenticationServiceMock.Setup(x => x.RegisterAsync(email, password))
+            .ThrowsAsync(new InvalidOperationException("Firebase error"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            usersManager.RegisterUserInFirebase(email, password));
+    }
+
+    [Fact]
+    public async Task LoginUserInFirebaseReturnsJwtTokenWhenSuccessful()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        const string email = "user@example.com";
+        const string password = "Password123!";
+        const string expectedToken = "jwt-token-xyz";
+        var appSettings = AppSettingsHelper.GetAppSettings();
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings()).ReturnsAsync(appSettings);
+        _authenticationServiceMock
+            .Setup(x => x.GetJwtTokenFromFirebaseAsync(email, password, appSettings.WebAppConfigs.FirebaseApiKey))
+            .ReturnsAsync(expectedToken);
+
+        // Act
+        var token = await usersManager.LoginUserInFirebase(email, password);
+
+        // Assert
+        Assert.Equal(expectedToken, token);
+        _authenticationServiceMock.Verify(
+            x => x.GetJwtTokenFromFirebaseAsync(email, password, appSettings.WebAppConfigs.FirebaseApiKey),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task LoginUserInFirebaseLogsAndThrowsWhenExceptionOccurs()
+    {
+        // Arrange
+        var usersManager = CreateUsersManager();
+        const string email = "user@example.com";
+        const string password = "Password123!";
+        _appSettingsManagerMock.Setup(x => x.GetAppSettings())
+            .ThrowsAsync(new InvalidOperationException("Settings failure"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            usersManager.LoginUserInFirebase(email, password));
+    }
 }

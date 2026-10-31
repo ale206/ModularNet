@@ -152,7 +152,7 @@ public class EncryptManager : IEncryptManager
         // Define the key and IV
         // TODO: Add these tokens in a secure place
         var keyString = "ModularNet.2024".PadRight(32, ' '); // Ensure the key is 32 bytes
-        var ivString = "ModularNet.IV.2024".PadRight(16, ' '); // Ensure the IV is 16 bytes
+        var ivString = "ModularNet.IV.2024".Substring(0, 16); // Ensure the IV is 16 bytes
 
         // Convert key and IV to byte arrays
         var key = Encoding.UTF8.GetBytes(keyString);
@@ -207,9 +207,9 @@ public class EncryptManager : IEncryptManager
         var decryptedDateTimeString = await DecryptOneAccessCode(accessCode);
 
         // Step 2: Validate the decrypted date-time
-        if (!DateTime.TryParse(decryptedDateTimeString, out var decryptedDateTime)) return false;
-        var difference = DateTime.UtcNow - decryptedDateTime;
-        return difference.TotalMinutes <= 1;
+        if (!DateTime.TryParse(decryptedDateTimeString, null, System.Globalization.DateTimeStyles.RoundtripKind, out var decryptedDateTime)) return false;
+        var difference = DateTime.UtcNow - decryptedDateTime.ToUniversalTime();
+        return difference.TotalMinutes >= 0 && difference.TotalMinutes <= 1;
     }
 
     #endregion
