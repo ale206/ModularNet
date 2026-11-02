@@ -1,4 +1,4 @@
-name: Unit Tests & Code Coverage
+name: Tests & Code Coverage
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    name: Run Unit Tests
+    name: Run Tests & Calculate Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -29,15 +29,24 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore src/ModularNet.sln
 
-      - name: Run Unit Tests with Coverage
+      - name: Run Unit & Integration Tests with Merged Coverage
         run: |
           dotnet test src/ModularNet.UnitTests/ModularNet.UnitTests.csproj \
             --configuration Release \
             --no-restore \
             --verbosity normal \
             /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=json \
+            /p:CoverletOutput=TestResults/coverage.json
+
+          dotnet test src/ModularNet.IntegrationTests/ModularNet.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --verbosity normal \
+            /p:CollectCoverage=true \
+            /p:MergeWith="../ModularNet.UnitTests/TestResults/coverage.json" \
             /p:CoverletOutputFormat=cobertura \
-            /p:CoverletOutput=TestResults/coverage.cobertura.xml
+            /p:CoverletOutput="../ModularNet.UnitTests/TestResults/coverage.cobertura.xml"
 
       - name: Generate Code Coverage Badge
         run: |
