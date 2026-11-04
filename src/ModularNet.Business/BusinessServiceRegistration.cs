@@ -24,6 +24,7 @@ public static class BusinessServiceRegistration
         services.AddScoped<ILogsManager, LogsManager>();
         services.AddScoped<ISecretsManager, SecretsManager>();
         services.AddScoped<IUsersManager, UsersManager>();
+        services.AddScoped<IUserNameManager, UserNameManager>();
         services.AddScoped<IUsersSettingsManager, UsersSettingsManager>();
         services.AddScoped<IWebAppConfigsManager, WebAppConfigsManager>();
 
