@@ -2,10 +2,10 @@
 
 The cache registrations demonstrate one contract, `ICacheRepository`, backed by the existing in-memory and Redis repositories. `AddInfrastructureServices` registers each adapter with a `CacheType` key. Both can be used in the same scope; Redis still requires its normal connection configuration.
 
-`UsersSettingsManager` injects the in-memory adapter as a working example. Inject a known backend into a Business class:
+`CacheManager` injects both keyed adapters and selects one using `CacheType`. Other managers use `ICacheManager`, as in `UsersSettingsManager`. To inject a known backend into its corresponding manager:
 
 ```csharp
-public ExampleManager(
+public CacheManager(
     [FromKeyedServices(CacheType.InMemory)] ICacheRepository cacheRepository)
 {
     _cacheRepository = cacheRepository;
@@ -22,4 +22,4 @@ Interfaces currently live in Infrastructure under the project's coding standards
 
 ## Disabled cache behavior
 
-`AppSettings:ModularNetConfig:RedisCacheEnabled` and `MemoryCacheEnabled` control the underlying repositories, not DI registrations. When the selected cache is disabled, reads return `default` (a cache miss for reference types), and writes and removals do nothing. Redis is not contacted and there is no automatic fallback to memory. `UsersSettingsManager` handles a cache miss by reading the database. This also means disabled caching increases database traffic. Enable Redis and configure its connection before selecting it if caching is required. For value types, `default` cannot distinguish a cache miss from a cached default value.
+`AppSettings:ModularNetConfig:RedisCacheEnabled` and `MemoryCacheEnabled` control the underlying repositories, not DI registrations. When the selected cache is disabled, reads return `default` (a cache miss for reference types), and writes and removals do nothing. Redis is not contacted and there is no automatic fallback to memory. `UsersSettingsManager` handles a cache miss through `ICacheManager` by reading the database. This also means disabled caching increases database traffic. Enable Redis and configure its connection before selecting it if caching is required. For value types, `default` cannot distinguish a cache miss from a cached default value.
