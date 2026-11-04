@@ -43,28 +43,10 @@ All architectural rules, layer responsibilities, differences from Onion Architec
 
 ## Multiple infrastructure implementations
 
-The cache registrations demonstrate one contract, `ICacheRepository`, backed by the existing in-memory and Redis repositories. `AddInfrastructureServices` registers each adapter with a `CacheType` key. Both can be used in the same scope; Redis still requires its normal connection configuration.
+`CacheManager` uses keyed `ICacheRepository` adapters for memory and Redis. Managers select a backend through `ICacheManager`; for example, change the `CacheType` constant in `UsersManager` to `CacheType.Redis`. To add a backend, implement and register the adapter with a new key and update `CacheManager`.
 
-`CacheManager` injects both keyed adapters and selects one using `CacheType`. Other managers use `ICacheManager`, as in `UsersSettingsManager`. To inject a known backend into its corresponding manager:
+`MemoryCacheEnabled` and `RedisCacheEnabled` control cache operations, not registration. A disabled cache returns misses and ignores writes and removals; it does not fall back to another cache. Redis requires its connection configuration when enabled. For value types, a miss returns `default` and cannot be distinguished from a cached default value.
 
-```csharp
-public CacheManager(
-    [FromKeyedServices(CacheType.InMemory)] ICacheRepository cacheRepository)
-{
-    _cacheRepository = cacheRepository;
-}
-```
+`UsersManager.GetUserFirstNameByUserId` demonstrates caching for five minutes. Invalidate the key when names change, or choose an acceptable expiration.
 
-Import `Microsoft.Extensions.DependencyInjection`, `ModularNet.Domain.Enums`, and `ModularNet.Infrastructure.Interfaces`. Use `CacheType.Redis` for Redis. The current `CacheManager` injects both keys, so removing a registration requires updating its constructor and selection logic. A manager designed for a single backend can inject just that keyed implementation. For runtime selection, resolve the requested key within the current DI scope with `GetRequiredKeyedService<ICacheRepository>(cacheType)`. An unknown or unregistered key fails rather than silently selecting another backend. Avoid resolving scoped services from the root provider.
-
-To add a backend, implement the contract, register it with a distinct key and appropriate lifetime, and test all contract operations. Do not register multiple unkeyed implementations expecting ordinary injection to select between them: .NET resolves the last registration for a single service; `IEnumerable<ICacheRepository>` returns all unkeyed registrations.
-
-The adapters preserve the existing cache API and lifetimes. They are an example of selection, not database provider implementations. To add PostgreSQL or another database, implement provider-specific repositories and SQL, connection factory, and transaction handling; select a consistent set together. The current MySQL repositories contain provider-specific SQL. Repositories participating in one unit of work must share the same scoped connection and transaction; keyed registration alone does not make cross-provider transactions atomic. Test each provider against its actual database, including commit and rollback.
-
-Interfaces currently live in Infrastructure under the project's coding standards. Multiple implementations can coexist there in provider-specific folders. If provider dependencies or independent deployment justify separate projects, first move shared contracts to an Infrastructure abstractions project, then have Business and each provider project reference it; keep registration in the application composition root. This adds project and migration overhead, so the template keeps its existing layout until that separation is needed.
-
-### Disabled cache behavior
-
-`AppSettings:ModularNetConfig:RedisCacheEnabled` and `MemoryCacheEnabled` control the underlying repositories, not DI registrations. When the selected cache is disabled, reads return `default` (a cache miss for reference types), and writes and removals do nothing. Redis is not contacted and there is no automatic fallback to memory. `UsersSettingsManager` handles a cache miss through `ICacheManager` by reading the database. This also means disabled caching increases database traffic. Enable Redis and configure its connection before selecting it if caching is required. For value types, `default` cannot distinguish a cache miss from a cached default value.
-
-`UsersManager.GetUserFirstNameByUserId` shows a consumer choosing `CacheType.InMemory` through `ICacheManager`. Change its `CacheType` constant to `CacheType.Redis` to use Redis. On a miss it loads the user through `IUsersRepository` and caches the first name for five minutes. If names can change, invalidate the same key on update or choose an acceptable expiration; disabled caching always reads the user.
+Database providers also need provider-specific SQL, connection factories, and transaction handling. Repositories in one unit of work must share a scoped connection and transaction. Test each provider against its database; keyed registration alone does not provide cross-provider transactions.
