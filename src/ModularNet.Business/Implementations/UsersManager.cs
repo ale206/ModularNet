@@ -9,7 +9,7 @@ namespace ModularNet.Business.Implementations;
 
 public class UsersManager : IUsersManager
 {
-    private const CacheType UserNameCacheType = CacheType.InMemory;
+    private const CacheType CacheType = ModularNet.Domain.Enums.CacheType.InMemory;
     private const int UserNameCacheExpirationSeconds = 300;
     private readonly ICacheManager _cacheManager;
     private readonly IAppSettingsManager _appSettingsManager;
@@ -135,13 +135,13 @@ public class UsersManager : IUsersManager
     {
         _logger.LogDebug("Start method {Method}", nameof(GetUserFirstNameByUserId));
         var cacheKey = $"user:{userId}:first-name";
-        var firstName = await _cacheManager.GetFromCache<string>(cacheKey, UserNameCacheType);
+        var firstName = await _cacheManager.GetFromCache<string>(cacheKey, CacheType);
         if (firstName != null) return firstName;
 
         var user = await _usersRepository.GetUserById(userId);
         if (user == null) return null;
 
-        await _cacheManager.SaveInCache(cacheKey, user.FirstName, UserNameCacheType, UserNameCacheExpirationSeconds);
+        await _cacheManager.SaveInCache(cacheKey, user.FirstName, CacheType, UserNameCacheExpirationSeconds);
         return user.FirstName;
     }
 
