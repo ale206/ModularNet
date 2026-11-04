@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Domain.Enums;
 using ModularNet.Infrastructure;
 using ModularNet.Infrastructure.Interfaces;
+using ModularNet.Infrastructure.Implementations;
 using Moq;
 using Xunit;
 
@@ -41,4 +44,24 @@ public class KeyedCacheRepositoryTests
         inMemoryCacheRepositoryMock.Verify(repository => repository.RemoveFromInMemoryCache("key"), Times.Once);
         redisRepositoryMock.Verify(repository => repository.RemoveFromRedisCache("key"), Times.Once);
     }
+    [Fact]
+    public async Task DisabledRedisAdapterTreatsReadsAsMissesWithoutConnecting()
+    {
+        var redisConnectionFactoryMock = new Mock<IRedisConnectionFactory>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger<RedisRepository>>();
+        var hostingEnvironmentMock = new Mock<IHostingEnvironment>();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AppSettings:ModularNetConfig:RedisCacheEnabled"] = "false"
+        }).Build();
+        var redisRepository = new RedisRepository(redisConnectionFactoryMock.Object, loggerMock.Object,
+            hostingEnvironmentMock.Object, configuration);
+        var redisCacheAdapter = new RedisCacheAdapter(redisRepository);
+
+        await redisCacheAdapter.Save("key", "value", 30);
+        Assert.Null(await redisCacheAdapter.Get<string>("key"));
+        await redisCacheAdapter.Remove("key");
+        redisConnectionFactoryMock.VerifyNoOtherCalls();
+    }
+
 }

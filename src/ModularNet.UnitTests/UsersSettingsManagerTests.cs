@@ -11,7 +11,7 @@ namespace ModularNet.UnitTests;
 
 public class UsersSettingsManagerTests
 {
-    private readonly Mock<ICacheManager> _cacheManagerMock = new();
+    private readonly Mock<ICacheRepository> _cacheRepositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IUsersSettingsRepository> _usersSettingsRepositoryMock = new();
 
@@ -19,7 +19,7 @@ public class UsersSettingsManagerTests
     {
         return new UsersSettingsManager(
             _usersSettingsRepositoryMock.Object,
-            _cacheManagerMock.Object,
+            _cacheRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
 
@@ -30,8 +30,8 @@ public class UsersSettingsManagerTests
         var usersSettingsManager = CreateUsersSettingsManager();
         var userId = Guid.NewGuid();
         var cachedSettings = new List<UserSetting> { UserSettingsHelper.GetUserSetting() };
-        _cacheManagerMock
-            .Setup(x => x.GetFromCache<List<UserSetting>>($"{userId}-settings", CacheType.InMemory))
+        _cacheRepositoryMock
+            .Setup(x => x.Get<List<UserSetting>>($"{userId}-settings"))
             .ReturnsAsync(cachedSettings);
 
         // Act
@@ -50,8 +50,8 @@ public class UsersSettingsManagerTests
         var userId = Guid.NewGuid();
         var settingDto = UserSettingsHelper.GetUserSettingDto();
         settingDto.UserId = userId;
-        _cacheManagerMock
-            .Setup(x => x.GetFromCache<List<UserSetting>>($"{userId}-settings", CacheType.InMemory))
+        _cacheRepositoryMock
+            .Setup(x => x.Get<List<UserSetting>>($"{userId}-settings"))
             .ReturnsAsync((List<UserSetting>?)null);
         _usersSettingsRepositoryMock
             .Setup(x => x.GetUserSettings(userId))
@@ -63,8 +63,8 @@ public class UsersSettingsManagerTests
         // Assert
         Assert.Single(userSettings);
         Assert.Equal(settingDto.SettingName, userSettings[0].SettingName);
-        _cacheManagerMock.Verify(
-            x => x.SaveInCache($"{userId}-settings", It.IsAny<List<UserSetting>>(), CacheType.InMemory, 2592000),
+        _cacheRepositoryMock.Verify(
+            x => x.Save($"{userId}-settings", It.IsAny<List<UserSetting>>(), 2592000),
             Times.Once);
     }
 

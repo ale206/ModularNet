@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Entities;
 using ModularNet.Domain.Enums;
@@ -8,14 +9,14 @@ namespace ModularNet.Business.Implementations;
 
 public class UsersSettingsManager : IUsersSettingsManager
 {
-    private readonly ICacheManager _cacheManager;
+    private readonly ICacheRepository _cacheRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUsersSettingsRepository _usersSettingsRepository;
 
-    public UsersSettingsManager(IUsersSettingsRepository usersSettingsRepository, ICacheManager cacheManager, IUnitOfWork unitOfWork)
+    public UsersSettingsManager(IUsersSettingsRepository usersSettingsRepository, [FromKeyedServices(CacheType.InMemory)] ICacheRepository cacheRepository, IUnitOfWork unitOfWork)
     {
         _usersSettingsRepository = usersSettingsRepository;
-        _cacheManager = cacheManager;
+        _cacheRepository = cacheRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -25,7 +26,7 @@ public class UsersSettingsManager : IUsersSettingsManager
         var usrSettingsItem =
             $"{userId}-settings"; //TODO: Replicated. Set in config? Or in better place.
         var userSettingsFromCache =
-            await _cacheManager.GetFromCache<List<UserSetting>>(usrSettingsItem, CacheType.InMemory);
+            await _cacheRepository.Get<List<UserSetting>>(usrSettingsItem);
         if (userSettingsFromCache != null) return userSettingsFromCache;
 
         var userSettings = new List<UserSetting>();
@@ -44,7 +45,7 @@ public class UsersSettingsManager : IUsersSettingsManager
 
         // Cache settings for one month. Cache will be invalidated when new settings are created or updated
         // TODO: Time is replicated in CreateOrUpdateUserSettings
-        await _cacheManager.SaveInCache(usrSettingsItem, userSettings, CacheType.InMemory, 2592000);
+        await _cacheRepository.Save(usrSettingsItem, userSettings, 2592000);
 
         return userSettings;
     }
@@ -61,7 +62,7 @@ public class UsersSettingsManager : IUsersSettingsManager
 
         // Remove current settings from cache
         var usrSettingsItem = $"{userId}-settings"; //TODO: Replicated. Set in config? Or in better place.
-        await _cacheManager.RemoveFromCache(usrSettingsItem, CacheType.InMemory);
+        await _cacheRepository.Remove(usrSettingsItem);
 
         // Lists to track settings for update and creation
         var settingsToUpdate = new List<UserSetting>();
@@ -116,7 +117,7 @@ public class UsersSettingsManager : IUsersSettingsManager
 
         // Cache settings for one month. Cache will be invalidated when new settings are created or updated
         // TODO: Time is replicated in GetUserSettings
-        await _cacheManager.SaveInCache(usrSettingsItem, allSettings, CacheType.InMemory, 2592000);
+        await _cacheRepository.Save(usrSettingsItem, allSettings, 2592000);
 
         // Return the updated user settings
         return allSettings;
