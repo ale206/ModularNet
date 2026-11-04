@@ -40,3 +40,5 @@ All architectural rules, layer responsibilities, differences from Onion Architec
 - **[Coding Standards](coding-standards.md):** Architecture rules, conventions, and step-by-step feature guide.
 - **[Wiki](https://github.com/ale206/ModularNet/wiki):** Component-by-component reference for the solution.
 - **[Discussions](https://github.com/ale206/ModularNet/discussions):** Ideas, questions, and feedback. Contributions and Pull Requests are welcome!
+
+For an example of selecting one or multiple infrastructure implementations, see [Multiple infrastructure implementations](docs/multiple-infrastructure-implementations.md).
