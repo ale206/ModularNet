@@ -40,3 +40,13 @@ All architectural rules, layer responsibilities, differences from Onion Architec
 - **[Coding Standards](coding-standards.md):** Architecture rules, conventions, and step-by-step feature guide.
 - **[Wiki](https://github.com/ale206/ModularNet/wiki):** Component-by-component reference for the solution.
 - **[Discussions](https://github.com/ale206/ModularNet/discussions):** Ideas, questions, and feedback. Contributions and Pull Requests are welcome!
+
+## Multiple infrastructure implementations
+
+Define a shared Infrastructure interface for interchangeable implementations, register each with a distinct dependency-injection key, and select the implementation in its corresponding manager. Other managers access it through that manager's interface. Add a new implementation by registering a new key and updating the manager's selection logic.
+
+For example, `CacheManager` selects keyed `ICacheRepository` adapters for memory or Redis. `UsersManager` chooses a backend through `ICacheManager` using its `CacheType` constant; `GetUserFirstNameByUserId` caches a name for five minutes. Invalidate the key when names change, or choose an acceptable expiration.
+
+`MemoryCacheEnabled` and `RedisCacheEnabled` control operations, not registrations. A disabled cache returns misses and ignores writes and removals; it does not fall back. Redis needs its connection configuration when enabled. For value types, a miss returns `default`, indistinguishable from a cached default value.
+
+Database implementations also need provider-specific SQL, connections, and transaction handling. Repositories in one unit of work must share a scoped connection and transaction. Test each provider against its database; keyed registration alone does not provide cross-provider transactions.
