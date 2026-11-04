@@ -131,9 +131,9 @@ public class UsersManager : IUsersManager
         return await _usersRepository.GetUserById(userId);
     }
 
-    public async Task<string?> GetUserFirstNameById(Guid userId)
+    public async Task<string?> GetUserFirstNameByUserId(Guid userId)
     {
-        _logger.LogDebug("Start method {Method}", nameof(GetUserFirstNameById));
+        _logger.LogDebug("Start method {Method}", nameof(GetUserFirstNameByUserId));
         var cacheKey = $"user:{userId}:first-name";
         var firstName = await _cacheManager.GetFromCache<string>(cacheKey, UserNameCacheType);
         if (firstName != null) return firstName;

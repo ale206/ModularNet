@@ -282,19 +282,19 @@ public class UsersManagerTests
             usersManager.LoginUserInFirebase(email, password));
     }
     [Fact]
-    public async Task GetUserFirstNameByIdReturnsCachedName()
+    public async Task GetUserFirstNameByUserIdReturnsCachedName()
     {
         var userId = Guid.NewGuid();
         _cacheManagerMock.Setup(manager => manager.GetFromCache<string>($"user:{userId}:first-name", CacheType.InMemory))
             .ReturnsAsync("Ada");
         var usersManager = CreateUsersManager();
 
-        Assert.Equal("Ada", await usersManager.GetUserFirstNameById(userId));
+        Assert.Equal("Ada", await usersManager.GetUserFirstNameByUserId(userId));
         _usersRepositoryMock.Verify(repository => repository.GetUserById(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
-    public async Task GetUserFirstNameByIdLoadsAndCachesNameOnMiss()
+    public async Task GetUserFirstNameByUserIdLoadsAndCachesNameOnMiss()
     {
         var userId = Guid.NewGuid();
         var user = UsersHelper.GetUser();
@@ -302,16 +302,16 @@ public class UsersManagerTests
         _usersRepositoryMock.Setup(repository => repository.GetUserById(userId)).ReturnsAsync(user);
         var usersManager = CreateUsersManager();
 
-        Assert.Equal("Ada", await usersManager.GetUserFirstNameById(userId));
+        Assert.Equal("Ada", await usersManager.GetUserFirstNameByUserId(userId));
         _cacheManagerMock.Verify(manager => manager.SaveInCache($"user:{userId}:first-name", "Ada", CacheType.InMemory, 300), Times.Once);
     }
 
     [Fact]
-    public async Task GetUserFirstNameByIdReturnsNullWhenUserMissing()
+    public async Task GetUserFirstNameByUserIdReturnsNullWhenUserMissing()
     {
         var usersManager = CreateUsersManager();
 
-        Assert.Null(await usersManager.GetUserFirstNameById(Guid.NewGuid()));
+        Assert.Null(await usersManager.GetUserFirstNameByUserId(Guid.NewGuid()));
         _cacheManagerMock.Verify(manager => manager.SaveInCache(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CacheType>(), It.IsAny<int>()), Times.Never);
     }
 
