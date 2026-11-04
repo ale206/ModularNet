@@ -1,28 +1,35 @@
+using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Business.Interfaces;
+using ModularNet.IntegrationTests.Infrastructure;
 using Xunit;
 
 namespace ModularNet.IntegrationTests.Tests;
 
-public class AppSettingsManagerTests
+[Collection("IntegrationTests")]
+public class AppSettingsManagerTests : IDisposable
 {
+    private readonly IServiceScope _scope;
     private readonly IAppSettingsManager _appSettingsManager;
-    private readonly ISecretsManager _secretsManager;
 
-    public AppSettingsManagerTests(IAppSettingsManager appSettingsManager, ISecretsManager secretsManager)
+    public AppSettingsManagerTests(ModularNetWebApplicationFactory factory)
     {
-        _appSettingsManager = appSettingsManager;
-        _secretsManager = secretsManager;
+        _scope = factory.Services.CreateScope();
+        _appSettingsManager = _scope.ServiceProvider.GetRequiredService<IAppSettingsManager>();
     }
 
-    public async Task RunAllTests()
+    [Fact]
+    public async Task GetAppSettingsReturnsPopulatedAppSettings()
     {
-        await GetAppSettings();
-    }
-
-    private async Task GetAppSettings()
-    {
+        // Arrange & Act
         var appSettings = await _appSettingsManager.GetAppSettings();
 
+        // Assert
         Assert.NotNull(appSettings);
+        Assert.NotNull(appSettings.ModularNetConfig);
+    }
+
+    public void Dispose()
+    {
+        _scope.Dispose();
     }
 }

@@ -40,6 +40,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, $"ERROR Starting the Application: {ex.Message}");
+    throw;
 }
 finally
 {
@@ -106,31 +107,44 @@ async Task ConfigureServices(WebApplicationBuilder builder, IWebHostEnvironment 
 
     // Initialize Firebase App
 
-    if (env.IsDevelopment())
-        FirebaseApp.Create(
-            new AppOptions
+    lock (FirebaseLock)
+    {
+        if (FirebaseApp.DefaultInstance == null)
+        {
+            try
             {
-                Credential = GoogleCredential.FromFile("modularnet-firebase-adminsdk-dev.json")
-            });
-    else
-        try
-        {
-            // Configure FIREBASE_ADMIN_SDK in an Environment Variables Section (Azure App Service, for instance)
-            var firebaseAdminSdkJson = Environment.GetEnvironmentVariable("FIREBASE_ADMIN_SDK");
+                if (env.IsDevelopment())
+                    FirebaseApp.Create(
+                        new AppOptions
+                        {
+                            Credential = GoogleCredential.FromFile("modularnet-firebase-adminsdk-dev.json")
+                        });
+                else
+                    try
+                    {
+                        // Configure FIREBASE_ADMIN_SDK in an Environment Variables Section (Azure App Service, for instance)
+                        var firebaseAdminSdkJson = Environment.GetEnvironmentVariable("FIREBASE_ADMIN_SDK");
 
-            if (string.IsNullOrEmpty(firebaseAdminSdkJson))
-                throw new Exception("Error getting Firebase Admin SDK credentials from environment variable");
+                        if (string.IsNullOrEmpty(firebaseAdminSdkJson))
+                            throw new Exception("Error getting Firebase Admin SDK credentials from environment variable");
 
-            FirebaseApp.Create(
-                new AppOptions
-                {
-                    Credential = GoogleCredential.FromJson(firebaseAdminSdkJson)
-                });
+                        FirebaseApp.Create(
+                            new AppOptions
+                            {
+                                Credential = GoogleCredential.FromJson(firebaseAdminSdkJson)
+                            });
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, $"ERROR starting Firebase config: {ex.Message}");
+                    }
+            }
+            catch (ArgumentException) when (FirebaseApp.DefaultInstance != null)
+            {
+                // Ignored if created concurrently
+            }
         }
-        catch (Exception ex)
-        {
-            Log.Error(ex, $"ERROR starting Firebase config: {ex.Message}");
-        }
+    }
 
     builder.Services.AddAuthentication()
         .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,
@@ -143,7 +157,11 @@ async Task ConfigureServices(WebApplicationBuilder builder, IWebHostEnvironment 
             });
 
     // Application Insights
-    builder.Services.AddApplicationInsightsTelemetry();
+    var appInsightsConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+    if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
+    {
+        builder.Services.AddApplicationInsightsTelemetry();
+    }
 
     RegisterDomainServices(builder.Services, builder.Configuration);
 }
@@ -187,4 +205,9 @@ void RegisterDomainServices(IServiceCollection services, IConfiguration configur
     services.AddInfrastructureServices(configuration);
     services.AddBusinessServices(configuration);
     services.AddApiServices(configuration);
+}
+
+public partial class Program
+{
+    private static readonly object FirebaseLock = new();
 }

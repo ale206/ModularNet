@@ -1,28 +1,31 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using ModularNet.Domain.Entities;
+using ModularNet.IntegrationTests.Infrastructure;
 using Xunit;
 
 namespace ModularNet.IntegrationTests.Tests;
 
+[Collection("IntegrationTests")]
 public class ConfigurationTests
 {
     private readonly IConfiguration _configuration;
 
-    public ConfigurationTests(IConfiguration configuration)
+    public ConfigurationTests(ModularNetWebApplicationFactory factory)
     {
-        _configuration = configuration;
+        _configuration = factory.Services.GetRequiredService<IConfiguration>();
     }
 
-    public void RunAllTests()
+    [Fact]
+    public void GetConfigurationFromAppSettingsReturnsPopulatedConfiguration()
     {
-        GetConfigurationFromAppSettings();
-    }
-
-    private void GetConfigurationFromAppSettings()
-    {
+        // Arrange & Act
         var connectionString = _configuration.GetConnectionString("ModularNetConnectionString");
-        Assert.NotNull(connectionString);
-
         var appSettings = _configuration.GetSection("AppSettings").Get<AppSettings>();
+
+        // Assert
+        Assert.NotNull(connectionString);
         Assert.NotNull(appSettings);
+        Assert.NotNull(appSettings.ModularNetConfig);
     }
 }
