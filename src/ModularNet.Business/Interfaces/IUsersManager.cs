@@ -9,6 +9,7 @@ public interface IUsersManager
     Task LoginUser(UserSignInRequest userSignInRequest);
     Task<User?> GetUserByEmail(string email);
     Task<User?> GetUserById(Guid userId);
+    Task<string?> GetUserFirstNameById(Guid userId);
     Task SetUserEmailAsVerified(Guid userId);
     Task SetTermsAndConditionsAsAccepted(Guid userId);
     Task DeactivateAccount(Guid userId);

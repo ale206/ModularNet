@@ -9,6 +9,9 @@ namespace ModularNet.Business.Implementations;
 
 public class UsersManager : IUsersManager
 {
+    private const CacheType UserNameCacheType = CacheType.InMemory;
+    private const int UserNameCacheExpirationSeconds = 300;
+    private readonly ICacheManager _cacheManager;
     private readonly IAppSettingsManager _appSettingsManager;
     private readonly IAuditsManager _auditsManager;
     private readonly IAuthenticationService _authenticationService;
@@ -21,7 +24,7 @@ public class UsersManager : IUsersManager
     public UsersManager(IUsersRepository usersRepository, ILogger<UsersManager> logger, IEncryptManager encryptManager,
         IEmailServiceManager emailServiceManager, IAuditsManager auditsManager,
         IAuthenticationService authenticationService, IAppSettingsManager appSettingsManager,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork, ICacheManager cacheManager)
     {
         _usersRepository = usersRepository;
         _logger = logger;
@@ -31,6 +34,7 @@ public class UsersManager : IUsersManager
         _authenticationService = authenticationService;
         _appSettingsManager = appSettingsManager;
         _unitOfWork = unitOfWork;
+        _cacheManager = cacheManager;
 
         _logger.LogDebug($"{nameof(UsersManager)} constructed");
     }
@@ -125,6 +129,20 @@ public class UsersManager : IUsersManager
         _logger.LogDebug($"Start method {nameof(GetUserById)}");
 
         return await _usersRepository.GetUserById(userId);
+    }
+
+    public async Task<string?> GetUserFirstNameById(Guid userId)
+    {
+        _logger.LogDebug("Start method {Method}", nameof(GetUserFirstNameById));
+        var cacheKey = $"user:{userId}:first-name";
+        var firstName = await _cacheManager.GetFromCache<string>(cacheKey, UserNameCacheType);
+        if (firstName != null) return firstName;
+
+        var user = await _usersRepository.GetUserById(userId);
+        if (user == null) return null;
+
+        await _cacheManager.SaveInCache(cacheKey, user.FirstName, UserNameCacheType, UserNameCacheExpirationSeconds);
+        return user.FirstName;
     }
 
     public async Task SetUserEmailAsVerified(Guid userId)
