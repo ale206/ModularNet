@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Enums;
@@ -7,12 +8,12 @@ namespace ModularNet.Business.Implementations;
 
 public class CacheManager : ICacheManager
 {
-    private readonly IInMemoryCacheRepository _inMemoryCacheRepository;
+    private readonly ICacheRepository _inMemoryCacheRepository;
     private readonly ILogger<CacheManager> _logger;
-    private readonly IRedisRepository _redisRepository;
+    private readonly ICacheRepository _redisRepository;
 
-    public CacheManager(ILogger<CacheManager> logger, IInMemoryCacheRepository inMemoryCacheRepository,
-        IRedisRepository redisRepository)
+    public CacheManager(ILogger<CacheManager> logger, [FromKeyedServices(CacheType.InMemory)] ICacheRepository inMemoryCacheRepository,
+        [FromKeyedServices(CacheType.Redis)] ICacheRepository redisRepository)
     {
         _logger = logger;
         _inMemoryCacheRepository = inMemoryCacheRepository;
@@ -28,10 +29,10 @@ public class CacheManager : ICacheManager
         switch (cacheType)
         {
             case CacheType.InMemory:
-                await _inMemoryCacheRepository.SaveToInMemoryCache(item, value, cacheExpirationSeconds);
+                await _inMemoryCacheRepository.Save(item, value, cacheExpirationSeconds);
                 break;
             case CacheType.Redis:
-                await _redisRepository.SaveToRedisCache(item, value, cacheExpirationSeconds);
+                await _redisRepository.Save(item, value, cacheExpirationSeconds);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(cacheType), cacheType, null);
@@ -45,9 +46,9 @@ public class CacheManager : ICacheManager
         switch (cacheType)
         {
             case CacheType.InMemory:
-                return await _inMemoryCacheRepository.GetFromInMemoryCache<T>(itemKey);
+                return await _inMemoryCacheRepository.Get<T>(itemKey);
             case CacheType.Redis:
-                return await _redisRepository.GetFromRedisCache<T>(itemKey);
+                return await _redisRepository.Get<T>(itemKey);
             default:
                 throw new ArgumentOutOfRangeException(nameof(cacheType), cacheType, null);
         }
@@ -60,29 +61,14 @@ public class CacheManager : ICacheManager
         switch (cacheType)
         {
             case CacheType.InMemory:
-                await _inMemoryCacheRepository.RemoveFromInMemoryCache(item);
+                await _inMemoryCacheRepository.Remove(item);
                 break;
             case CacheType.Redis:
-                await _redisRepository.RemoveFromRedisCache(item);
+                await _redisRepository.Remove(item);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(cacheType), cacheType, null);
         }
     }
 
-    private async Task RemoveExpiredItems(CacheType cacheType)
-    {
-        _logger.LogDebug($"Start method {nameof(RemoveExpiredItems)}");
-
-        switch (cacheType)
-        {
-            case CacheType.InMemory:
-                await _inMemoryCacheRepository.RemoveExpiredItemsFromInMemoryCache();
-                break;
-            case CacheType.Redis:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(cacheType), cacheType, null);
-        }
-    }
 }

@@ -3,6 +3,7 @@ using ModularNet.Business.Implementations;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Enums;
 using ModularNet.Infrastructure.Interfaces;
+using ModularNet.Infrastructure.Implementations;
 using Moq;
 
 namespace ModularNet.UnitTests;
@@ -19,8 +20,8 @@ public class CacheManagerTests
 
     public CacheManagerTests()
     {
-        _cacheManager = new CacheManager(_loggerMock.Object, _inMemoryCacheRepositoryMock.Object,
-            _redisRepositoryMock.Object);
+        _cacheManager = new CacheManager(_loggerMock.Object, new InMemoryCacheAdapter(_inMemoryCacheRepositoryMock.Object),
+            new RedisCacheAdapter(_redisRepositoryMock.Object));
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using ModularNet.Business.Implementations;
 using ModularNet.Business.Interfaces;
 using ModularNet.Domain.Entities;
+using ModularNet.Domain.Enums;
 using ModularNet.Domain.Requests;
 using ModularNet.Infrastructure.Interfaces;
 using ModularNet.UnitTests.Helpers;
@@ -11,6 +12,7 @@ namespace ModularNet.UnitTests;
 
 public class UsersManagerTests
 {
+    private readonly Mock<ICacheManager> _cacheManagerMock = new();
     private readonly Mock<IAppSettingsManager> _appSettingsManagerMock = new();
     private readonly Mock<IAuditsManager> _auditsManagerMock = new();
     private readonly Mock<IAuthenticationService> _authenticationServiceMock = new();
@@ -30,7 +32,8 @@ public class UsersManagerTests
             _auditsManagerMock.Object,
             _authenticationServiceMock.Object,
             _appSettingsManagerMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _cacheManagerMock.Object);
     }
 
     [Fact]
@@ -278,4 +281,38 @@ public class UsersManagerTests
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             usersManager.LoginUserInFirebase(email, password));
     }
+    [Fact]
+    public async Task GetUserFirstNameByUserIdReturnsCachedName()
+    {
+        var userId = Guid.NewGuid();
+        _cacheManagerMock.Setup(manager => manager.GetFromCache<string>($"user:{userId}:first-name", CacheType.InMemory))
+            .ReturnsAsync("Ada");
+        var usersManager = CreateUsersManager();
+
+        Assert.Equal("Ada", await usersManager.GetUserFirstNameByUserId(userId));
+        _usersRepositoryMock.Verify(repository => repository.GetUserById(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetUserFirstNameByUserIdLoadsAndCachesNameOnMiss()
+    {
+        var userId = Guid.NewGuid();
+        var user = UsersHelper.GetUser();
+        user.FirstName = "Ada";
+        _usersRepositoryMock.Setup(repository => repository.GetUserById(userId)).ReturnsAsync(user);
+        var usersManager = CreateUsersManager();
+
+        Assert.Equal("Ada", await usersManager.GetUserFirstNameByUserId(userId));
+        _cacheManagerMock.Verify(manager => manager.SaveInCache($"user:{userId}:first-name", "Ada", CacheType.InMemory, 300), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserFirstNameByUserIdReturnsNullWhenUserMissing()
+    {
+        var usersManager = CreateUsersManager();
+
+        Assert.Null(await usersManager.GetUserFirstNameByUserId(Guid.NewGuid()));
+        _cacheManagerMock.Verify(manager => manager.SaveInCache(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CacheType>(), It.IsAny<int>()), Times.Never);
+    }
+
 }

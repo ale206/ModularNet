@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ModularNet.Domain.Enums;
 using ModularNet.Infrastructure.Implementations;
 using ModularNet.Infrastructure.Interfaces;
 
@@ -24,6 +25,10 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
         services.AddScoped<IRedisRepository, RedisRepository>();
+
+        // A shared contract can expose one or more backends without registration-order selection.
+        services.AddKeyedScoped<ICacheRepository, InMemoryCacheAdapter>(CacheType.InMemory);
+        services.AddKeyedScoped<ICacheRepository, RedisCacheAdapter>(CacheType.Redis);
 
         // HttpClient Services with Firebase
         services.AddHttpClient<IJwtProvider, JwtProvider>((sp, httpClient) =>
